@@ -1,11 +1,12 @@
 import random
+
 import numpy as np
 
 
 def set_random_seed(enable=False, seed=42):
     """
     设置随机种子以确保实验的可重复性
-    
+
     Args:
         enable (bool): 是否启用固定随机种子
         seed (int): 当 enable 为 True 时使用的随机种子
