@@ -4,4 +4,15 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "bayesian-optimization>=3.1.0",
+    "loguru>=0.7.3",
+    "packaging>=25.0",
+    "pooltool-billiards==0.5.0",
+    "tqdm>=4.67.1",
+]
+
+[tool.uv]
+override-dependencies = [
+    "panda3d>=1.10.13,<1.11",
+] # Force to use stable version of panda3d
