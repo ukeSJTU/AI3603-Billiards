@@ -244,6 +244,7 @@ class Agent:
         """
         pass
 
+    # NOTE: 这个可以看作“兜底动作生成器”，当Agent算不出来、或者初始化阶段需要随机探索时会调用它，同时也定义了整个项目的连续动作空间，所有 Agents 的 decision 方法都应该返回符合这个范围的动作
     def _random_action(
         self,
     ):
@@ -255,6 +256,7 @@ class Agent:
             theta: [0, 90] 度
             a, b: [-0.5, 0.5] 球半径比例
         """
+        # NOTE: 这里的round我的理解是对于连续动作空间做了一个离散化处理，方便贝叶斯优化器搜索，打印日志时也更美观
         action = {
             "V0": round(random.uniform(0.5, 8.0), 2),  # 初速度 0.5~8.0 m/s
             "phi": round(random.uniform(0, 360), 2),  # 水平角度 (0°~360°)
@@ -278,6 +280,8 @@ class BasicAgent(Agent):
         """
         super().__init__()
 
+        # NOTE: 这个是贝叶斯优化的参数搜索范围，必须和环境允许的动作范围一致
+        # ? 我感觉这个应该提取到统一的 config 文件里面去
         # 搜索空间
         self.pbounds = {
             "V0": (0.5, 8.0),
@@ -287,6 +291,7 @@ class BasicAgent(Agent):
             "b": (-0.5, 0.5),
         }
 
+        # NOTE: INITIAL_SEARCH 表示初始随机采样点数量，OPT_SEARCH 表示后续优化迭代次数，ALPHA 是高斯过程回归的噪声参数。
         # 优化参数
         self.INITIAL_SEARCH = 20
         self.OPT_SEARCH = 10
@@ -300,6 +305,7 @@ class BasicAgent(Agent):
 
     def _create_optimizer(self, reward_function, seed):
         """创建贝叶斯优化器
+        NOTE: 创建一个 `BayesianOptimization` 对象，让它在 pbounds 这个 5 维连续空间里反复调用 `reward_function` 评估动作好坏，并用高斯过程（GP）建模“参数→得分”的函数，从而更聪明地选下一次试探的参数。
 
         参数：
             reward_function: 目标函数，(V0, phi, theta, a, b) -> score
@@ -326,6 +332,7 @@ class BasicAgent(Agent):
             verbose=0,
             bounds_transformer=bounds_transformer,
         )
+        # ? 没有不用私有属性的方法吗？
         optimizer._gp = gpr
 
         return optimizer
@@ -342,24 +349,32 @@ class BasicAgent(Agent):
             dict: 击球动作 {'V0', 'phi', 'theta', 'a', 'b'}
                 失败时返回随机动作
         """
+        # NOTE: Step 0: 检查输入，如果没有 balls 信息则直接返回随机动作
         if balls is None:
             print("[BasicAgent] Agent decision函数未收到balls关键信息，使用随机动作。")
             return self._random_action()
         try:
+            # NOTE: Step 1: 保存击球前快照 + 判断是否该打 8
             # 保存一个击球前的状态快照，用于对比
             last_state_snapshot = {
                 bid: copy.deepcopy(ball) for bid, ball in balls.items()
             }
 
+            # ? 我感觉这里这个提示：Object of type "None" cannot be used as iterable value 是因为 my_targets 可能是 None 导致的，那么我们要不要在 step 0 就检查 my_targets 是否为 None 呢？一起处理？
             remaining_own = [bid for bid in my_targets if balls[bid].state.s != 4]
+            # NOTE: 如果己方目标球已全部进袋，则切换目标为 8 号球
             if len(remaining_own) == 0:
                 my_targets = ["8"]
                 print("[BasicAgent] 我的目标球已全部清空，自动切换目标为：8号球")
 
+            # NOTE: Step 2: 定义奖励函数并运行贝叶斯优化器搜索最佳参数
             # 1.动态创建“奖励函数” (Wrapper)
             # 贝叶斯优化器会调用此函数，并传入参数
+            # NOTE: 这个 reward_fn_wrapper 函数的作用是：对于给定的一组击球参数 (V0, phi, theta, a, b)，在沙盒环境中模拟击球过程，并使用 analyze_shot_for_reward 函数对结果进行评分，返回该评分作为奖励值。
             def reward_fn_wrapper(V0, phi, theta, a, b):
                 # 创建一个用于模拟的沙盒系统
+                # NOTE: 这里利用 copy.deepcopy 深拷贝球和桌子对象，确保每次模拟互不干扰
+                # ? 为什么不用 pt 对象自带的 copy 方法？例如：https://pooltool.readthedocs.io/en/latest/autoapi/pooltool/objects/index.html#pooltool.objects.Table.copy 。从库代码注释来看，库实现不是完全的深拷贝，而是考虑到性能做出优化的拷贝（只深拷贝可变对象，共享不可变对象）。类似的有 Ball 对象的 copy 方法：https://pooltool.readthedocs.io/en/latest/autoapi/pooltool/objects/index.html#pooltool.objects.Ball.copy
                 sim_balls = {bid: copy.deepcopy(ball) for bid, ball in balls.items()}
                 sim_table = copy.deepcopy(table)
                 cue = pt.Cue(cue_ball_id="cue")
@@ -390,12 +405,14 @@ class BasicAgent(Agent):
                             b=b_noisy,
                         )
                     else:
+                        # NOTE: 我觉得这个和上面的重复了，可以优化
                         shot.cue.set_state(V0=V0, phi=phi, theta=theta, a=a, b=b)
 
                     # 关键：使用带超时保护的物理模拟（3秒上限）
                     if not simulate_with_timeout(shot, timeout=3):
                         return 0  # 超时是物理引擎问题，不惩罚agent
                 except Exception:
+                    # ? 我看 set_state 应该是不会跑出异常的，那么这里应该只能捕获 simulate_with_timeout 里面的异常了吧？如果是这样的话，为什么不直接在 simulate_with_timeout 里面处理异常然后返回 False 呢？
                     # 模拟失败，给予极大惩罚
                     return -500
 
@@ -408,14 +425,21 @@ class BasicAgent(Agent):
 
             print(f"[BasicAgent] 正在为 Player (targets: {my_targets}) 搜索最佳击球...")
 
-            seed = np.random.randint(1e6)
+            # NOTE: Step 3：创建优化器并跑 maximize
+            # ? 这个应该是 np.random.randint(int(1e6))，生成一个 0~999999 之间的整数作为随机种子
+            seed = np.random.randint(1e6)  # type: ignore
             optimizer = self._create_optimizer(reward_fn_wrapper, seed)
+            # NOTE: 先随机采样 INITIAL_SEARCH 次，然后基于采样结果进行 OPT_SEARCH 次优化迭代
             optimizer.maximize(init_points=self.INITIAL_SEARCH, n_iter=self.OPT_SEARCH)
 
+            # NOTE: Step 4：拿到当前找到的最优参数
             best_result = optimizer.max
+            # ? 我这里提示 Object of type "None" is not subscriptable，是因为 optimizer.max 可能是 None 吗？后续是否要处理，比如回退到随机动作？
             best_params = best_result["params"]
             best_score = best_result["target"]
 
+            # NOTE: Step 5：低分兜底、否则返回最优动作
+            # NOTE: 如果连“合法无进球的小奖励 10”都达不到，认为没搜到靠谱方案，干脆随机。
             if best_score < 10:
                 print(
                     f"[BasicAgent] 未找到好的方案 (最高分: {best_score:.2f})。使用随机动作。"
