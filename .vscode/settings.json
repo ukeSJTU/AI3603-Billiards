@@ -88,5 +88,9 @@
         "*.md": "markdown"
     },
     "better-comments.highlightPlainText": false,
-    "editor.wordWrap": "wordWrapColumn"
+    "editor.wordWrap": "wordWrapColumn",
+
+    "[log]": {
+        "editor.wordWrap": "off"
+    }
 }
