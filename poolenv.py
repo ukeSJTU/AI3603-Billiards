@@ -79,12 +79,15 @@ class PoolEnv:
         self.cue = None
 
         # A和B方的球的ID
+        # NOTE: 数据结构：{'A': [球ID列表], 'B': [球ID列表]}
         self.player_targets = None
         # 击球数
         self.hit_count = 0
         # 上一时刻的状态
+        # NOTE: 用于犯规时回滚
         self.last_state = None
         # player的名称
+        # NOTE: 0 represents 'A', 1 represents 'B'
         self.players = ["A", "B"]
         # 当前击球方
         self.curr_player = 0
@@ -107,6 +110,7 @@ class PoolEnv:
         }
         self.enable_noise = True  # 是否启用噪声
 
+    # NOTE: 环境给 agent 的观测是什么
     def get_observation(self, player=None):
         """
         功能：获取指定玩家的观测信息（深拷贝）
@@ -117,6 +121,7 @@ class PoolEnv:
 
         返回值：
             tuple: (balls, my_targets, table)
+            NOTE: 这个返回的就是 agent.decision() 函数需要的输入格式
 
                 balls (dict): 球状态字典，{ball_id: Ball对象}
                     ball_id 取值：
@@ -197,6 +202,8 @@ class PoolEnv:
             return True, {"winner": self.winner, "hit_count": self.hit_count}
         return False, {}
 
+    # NOTE: 开局怎么摆球、怎么分配球型
+    # ? 我不理解这个方法存在的意义，为什么不直接在 __init__ 里初始化？也许是觉得一次启动评测需要多局比赛？每一次比赛结束后都要 reset 一下？
     def reset(self, state=None, target_ball: str = None):
         """重置环境
 
@@ -207,6 +214,7 @@ class PoolEnv:
                 'stripe': A打条纹(9-15), B打实心(1-7)
         """
         # 目前不支持恢复到指定state，只能恢复到新开一局的状态
+        # ? 那这个参数的意义在哪里？
         if state is not None:
             raise NotImplementedError("目前不支持恢复到指定state!")
         # 设置球场的初始状态
@@ -240,6 +248,7 @@ class PoolEnv:
         # 清空记录所有shot的列表
         self.shot_record = pt.MultiSystem()
 
+    # NOTE: 执行一杆击球动作
     def take_shot(self, action: dict):
         """执行击球动作
 
@@ -307,11 +316,15 @@ class PoolEnv:
         )
         pt.simulate(shot, inplace=True)
         # 记录所有shot，用于游戏结束后进行render
+        # NOTE: 这里的同样的 System 对象也提供了 copy 方法
         self.shot_record.append(copy.deepcopy(shot))
+
+        # NOTE: 上面的物理模拟结束了，下面开始进行规则判断+状态机更新，我认为有一部分和 agent.py 的 analyze_shot_for_reward 逻辑是重复的
 
         # 获取 final_states
         # final_states = collect_ball_states(shot)
         # 更新球状态到本次击球后的结果
+        # NOTE: 这只是暂时写入。如果后面判定犯规，需要回滚，会再把 self.balls 恢复成 self.last_state
         self.balls = shot.balls
         new_pocketed = [
             bid
@@ -319,6 +332,7 @@ class PoolEnv:
             if b.state.s == 4 and self.last_state[bid].state.s != 4
         ]
 
+        # NOTE: 这一部分也基本一致，没有太大区别，除了 foul_first_hit 这个变量
         events = shot.events
         first_contact_ball_id = None
         # 定义合法的球ID集合（排除 'cue' 和其他非球对象如 'cue stick'）
@@ -373,6 +387,8 @@ class PoolEnv:
             and bid not in ["cue", "8"]
         ]
 
+        # NOTE: 到这里为止的代码都和 analyze_shot_for_reward 几乎一样，根据事件提取出了我们需要的“事实”（例如new_pocketed，这一杆新进袋了哪些球？；first_contact_ball_id 白球手碰的球是谁？）下面开始有区别了
+
         ##### 规则判断，是否违规要回退，游戏是否结束，确定下一个击球方  #####
 
         # 白球和黑8同时落袋即可直接判负
@@ -391,12 +407,17 @@ class PoolEnv:
                 "BALLS": copy.deepcopy(self.balls),
             }
 
+        # NOTE: 为什么没有处理“误打黑8”的情况？
+        # ! 这里代码并非遗漏，而是先判断了白球进袋的情况，如果白球进袋，那么黑8不可能进袋了（因为黑8和白球同时进袋会在上面的代码里处理），所以可以将误打黑8的情况在下面的代码里处理
+
         # 白球掉袋 (犯规)
         if "cue" in new_pocketed:
             print("⚪ 白球落袋！犯规，恢复上一杆状态，交换球权。")
+            # NOTE: 我觉得这个恢复上一杆状态可以提取成一个方法
             # 保存击打前的balls状态用于返回
             balls_before_shot = copy.deepcopy(self.last_state)
             self.balls = restore_balls_state(self.last_state)
+            # NOTE: 交换击球方，这个也应该提取成一个方法
             self.curr_player = 1 - self.curr_player
             self.done = False
             self.hit_count += 1
@@ -622,6 +643,7 @@ class PoolEnv:
                 self.curr_player = 1 - self.curr_player
                 self.last_state = save_balls_state(self.balls)
                 self.hit_count += 1
+                # NOTE: 这里判断是否超过最大击球数的代码和上面重复了，应该提取成一个方法
                 if self.hit_count >= self.MAX_HIT_COUNT:
                     print("⏰ 达到最大击球数，比赛结束！")
                     self.done = True
@@ -658,6 +680,7 @@ class PoolEnv:
                     "BALLS": copy.deepcopy(self.balls),
                 }
 
+        # NOTE: 规则 7：有进球时，决定是否继续出杆
         # 判断是否打进自己球，确定下一个击球方
         if own_pocketed:
             print(f"🎯 Player {player} 打进了 {own_pocketed}，继续出杆。")
@@ -704,6 +727,7 @@ class PoolEnv:
                 "BALLS": copy.deepcopy(self.balls),
             }
 
+        # NOTE: 没有任何犯规，也没有进球，没有超过最大击球数
         # return 一些这一杆的结果信息
         return {
             "ME_INTO_POCKET": own_pocketed,
