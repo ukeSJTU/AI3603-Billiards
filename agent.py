@@ -34,6 +34,7 @@ def _timeout_handler(signum, frame):
     raise SimulationTimeoutError("物理模拟超时")
 
 
+# NOTE: this protection exists to prevent the pooltool simulation from hanging indefinitely and blocking the program.
 def simulate_with_timeout(shot, timeout=3):
     """带超时保护的物理模拟
 
@@ -49,6 +50,7 @@ def simulate_with_timeout(shot, timeout=3):
         超时后自动恢复，不会导致程序卡死
     """
     # 设置超时信号处理器
+    # ? I suspect this will not work on Windows systems, as signal.SIGALRM is not supported there. And it also generally works reliably only in the main thread.
     old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
     signal.alarm(timeout)  # 设置超时时间
 
@@ -89,6 +91,9 @@ def analyze_shot_for_reward(shot: pt.System, last_state: dict, player_targets: l
     """
 
     # 1. 基本分析
+    # NOTE: new_pocketed 包含所有新进袋的球ID(当前状态为 4-pocketed，且上次状态非 pocketed)
+    # BallState.s: The motion state label of the ball.
+    # possible values can be found here: https://pooltool.readthedocs.io/en/latest/autoapi/pooltool/objects/index.html#pooltool.objects.BallState.s
     new_pocketed = [
         bid
         for bid, b in shot.balls.items()
@@ -96,13 +101,18 @@ def analyze_shot_for_reward(shot: pt.System, last_state: dict, player_targets: l
     ]
 
     # 根据 player_targets 判断进球归属（黑8只有在清台后才算己方球）
+    # NOTE: own_pocketed 指的是当前这一轮击球中，己方进的球
+    # ? 为什么计算 own_pockted 的时候不需要排除 "cue" 和 "8" 呢？
+    # NOTE: 因为 player_targets 本身就不会包含 "cue" 和 "8"（除非清台后只剩 "8"）
     own_pocketed = [bid for bid in new_pocketed if bid in player_targets]
+    # NOTE: enemy_pocketed 指的是当前这一轮击球中，对方进的球，不包括白球和黑8
     enemy_pocketed = [
         bid
         for bid in new_pocketed
         if bid not in player_targets and bid not in ["cue", "8"]
     ]
 
+    # NOTE: 白球和黑8进袋单独处理，方便后续计算
     cue_pocketed = "cue" in new_pocketed
     eight_pocketed = "8" in new_pocketed
 
@@ -127,7 +137,10 @@ def analyze_shot_for_reward(shot: pt.System, last_state: dict, player_targets: l
         "15",
     }
 
+    # NOTE: 下面这个循环是想要找到第一个母球碰撞的目标球ID，记录在 first_contact_ball_id 中，这个不一定是 player_targets 里的球，后续会进行判定
+    # NOTE: shot.events 是按照时间顺序排列的事件列表，包括碰撞、进袋等事件
     for e in shot.events:
+        # NOTE: possible values for event_type can be found here: https://pooltool.readthedocs.io/en/latest/autoapi/pooltool/events/index.html#pooltool.events.EventType
         et = str(e.event_type).lower()
         ids = list(e.ids) if hasattr(e, "ids") else []
         if ("cushion" not in et) and ("pocket" not in et) and ("cue" in ids):
@@ -135,6 +148,7 @@ def analyze_shot_for_reward(shot: pt.System, last_state: dict, player_targets: l
             other_ids = [i for i in ids if i != "cue" and i in valid_ball_ids]
             if other_ids:
                 first_contact_ball_id = other_ids[0]
+                # NOTE: 只关心首次碰撞，找到后立即跳出循环
                 break
 
     # 首球犯规判定：完全对齐 player_targets
@@ -148,10 +162,13 @@ def analyze_shot_for_reward(shot: pt.System, last_state: dict, player_targets: l
             foul_first_hit = True
 
     # 3. 分析碰库
+    # NOTE: cue_hit_cushion 记录是否母球碰库
     cue_hit_cushion = False
+    # NOTE: target_hit_cushion 记录第一次触碰（first_contact_ball_id）的球是否碰库
     target_hit_cushion = False
     foul_no_rail = False
 
+    # NOTE: 再次扫描事件列表，检查有没有和库相关的事件，并更新 cue_hit_cushion 和 target_hit_cushion
     for e in shot.events:
         et = str(e.event_type).lower()
         ids = list(e.ids) if hasattr(e, "ids") else []
@@ -161,6 +178,11 @@ def analyze_shot_for_reward(shot: pt.System, last_state: dict, player_targets: l
             if first_contact_ball_id is not None and first_contact_ball_id in ids:
                 target_hit_cushion = True
 
+    # NOTE: 碰库犯规判定，当以下条件同时满足时，判定为未碰库犯规：
+    # - 本次击球没有任何球进袋（len(new_pocketed) == 0）
+    # - 首次碰撞的球存在（first_contact_ball_id is not None）
+    # - 母球没有碰库（not cue_hit_cushion）
+    # - 首次碰撞的球没有碰库（not target_hit_cushion）
     if (
         len(new_pocketed) == 0
         and first_contact_ball_id is not None
@@ -168,6 +190,8 @@ def analyze_shot_for_reward(shot: pt.System, last_state: dict, player_targets: l
         and (not target_hit_cushion)
     ):
         foul_no_rail = True
+
+    # NOTE: 上面是按照规则分析，下面开始计算得分
 
     # 4. 计算奖励分数
     score = 0
