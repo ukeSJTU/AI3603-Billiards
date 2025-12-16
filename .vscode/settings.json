@@ -87,5 +87,6 @@
     "files.associations": {
         "*.md": "markdown"
     },
-    "better-comments.highlightPlainText": false
+    "better-comments.highlightPlainText": false,
+    "editor.wordWrap": "wordWrapColumn"
 }
