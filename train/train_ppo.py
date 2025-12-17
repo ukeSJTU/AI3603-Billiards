@@ -11,9 +11,10 @@ train_ppo.py - PPO Agent 训练脚本
 import argparse
 from pathlib import Path
 
+import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 
 from agent import BasicAgent
 from gym_wrapper import PoolGymEnv
@@ -54,6 +55,7 @@ def train(
     save_freq: int = 10000,
     eval_freq: int = 5000,
     n_eval_episodes: int = 5,
+    n_envs: int = 4,
 ):
     """
     训练 PPO Agent
@@ -64,10 +66,20 @@ def train(
         save_freq: 保存检查点频率
         eval_freq: 评估频率
         n_eval_episodes: 每次评估的对局数
+        n_envs: 并行环境数量（推荐 4-8，设为 1 则使用单进程）
     """
     log.info(f"开始训练 PPO Agent")
     log.info(f"总训练步数: {total_timesteps}")
     log.info(f"保存目录: {save_dir}")
+    log.info(f"并行环境数: {n_envs}")
+
+    # 检测设备（优先使用 CUDA）
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    log.info(f"使用设备: {device.upper()}")
+    if device == "cuda":
+        log.info(f"  GPU 型号: {torch.cuda.get_device_name(0)}")
+    else:
+        log.warning("  未检测到 CUDA，使用 CPU 训练（速度较慢）")
 
     # 创建保存目录
     Path(save_dir).mkdir(parents=True, exist_ok=True)
@@ -75,10 +87,18 @@ def train(
 
     # 创建训练环境（向量化）
     log.info("创建训练环境...")
-    env = DummyVecEnv([make_env()])
+    if n_envs > 1:
+        # 使用多进程环境（加速采样）
+        log.info(f"使用 SubprocVecEnv（{n_envs} 个并行进程）")
+        env = SubprocVecEnv([make_env() for _ in range(n_envs)])
+    else:
+        # 使用单进程环境
+        log.info("使用 DummyVecEnv（单进程）")
+        env = DummyVecEnv([make_env()])
+
     env = VecNormalize(env, norm_obs=True, norm_reward=True)
 
-    # 创建评估环境
+    # 创建评估环境（始终使用单进程）
     log.info("创建评估环境...")
     eval_env = DummyVecEnv([make_env()])
     eval_env = VecNormalize(eval_env, training=False, norm_obs=True, norm_reward=False)
@@ -98,8 +118,9 @@ def train(
         ent_coef=0.01,
         verbose=1,
         tensorboard_log=f"{save_dir}/tensorboard/",
+        device=device,  # 使用检测到的设备
     )
-    log.info("PPO 模型已创建")
+    log.info(f"PPO 模型已创建（设备: {device}）")
 
     # 回调函数
     log.info("设置回调函数...")
@@ -123,6 +144,8 @@ def train(
     # 开始训练
     log.info("=" * 60)
     log.info(f"开始训练 PPO Agent，总步数: {total_timesteps}")
+    log.info(f"设备: {device.upper()}")
+    log.info(f"并行环境: {n_envs}")
     log.info(f"检查点保存频率: 每 {save_freq} 步")
     log.info(f"评估频率: 每 {eval_freq} 步（{n_eval_episodes} 局）")
     log.info(f"TensorBoard 日志: {save_dir}/tensorboard/")
@@ -175,6 +198,12 @@ def main():
     parser.add_argument(
         "--n-eval-episodes", type=int, default=5, help="每次评估的对局数"
     )
+    parser.add_argument(
+        "--n-envs",
+        type=int,
+        default=4,
+        help="并行环境数量（推荐: 4-8，设为 1 则使用单进程）",
+    )
 
     args = parser.parse_args()
 
@@ -184,6 +213,7 @@ def main():
         save_freq=args.save_freq,
         eval_freq=args.eval_freq,
         n_eval_episodes=args.n_eval_episodes,
+        n_envs=args.n_envs,
     )
 
 
