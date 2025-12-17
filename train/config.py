@@ -159,6 +159,41 @@ DEFAULT_EVAL_CONFIG = EvaluateConfig()
 REWARD_CONFIG = RewardConfig()
 
 
+# ============ PPO 训练配置 ============
+@dataclass
+class PPOTrainConfig:
+    """PPO 训练配置
+
+    Attributes:
+        total_timesteps: 总训练步数
+        learning_rate: 学习率
+        n_steps: 每次更新的步数
+        batch_size: 批大小
+        n_epochs: 每次更新的 epoch 数
+        gamma: 折扣因子
+        gae_lambda: GAE lambda 参数
+        clip_range: PPO 裁剪范围
+        ent_coef: 熵系数
+        save_freq: 保存频率（步数）
+        eval_freq: 评估频率（步数）
+    """
+
+    total_timesteps: int = 200000  # 总训练步数
+    learning_rate: float = 3e-4  # 学习率
+    n_steps: int = 2048  # 每次更新的步数
+    batch_size: int = 64  # 批大小
+    n_epochs: int = 10  # 每次更新的 epoch 数
+    gamma: float = 0.99  # 折扣因子
+    gae_lambda: float = 0.95  # GAE lambda
+    clip_range: float = 0.2  # PPO 裁剪范围
+    ent_coef: float = 0.01  # 熵系数
+    save_freq: int = 10000  # 保存频率
+    eval_freq: int = 5000  # 评估频率
+
+
+DEFAULT_PPO_CONFIG = PPOTrainConfig()
+
+
 # ============ 导出 ============
 __all__ = [
     "ActionBounds",
@@ -171,4 +206,6 @@ __all__ = [
     "DEFAULT_EVAL_CONFIG",
     "RewardConfig",
     "REWARD_CONFIG",
+    "PPOTrainConfig",
+    "DEFAULT_PPO_CONFIG",
 ]
