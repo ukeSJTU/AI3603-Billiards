@@ -29,6 +29,7 @@ except ImportError:
 
 from agent import BaseAgent, BasicAgent, NewAgent
 from poolenv import PoolEnv
+from ppo_agent import PPOAgent
 from utils import set_random_seed
 
 # 配置导入
@@ -47,6 +48,7 @@ except ImportError:
 AGENT_REGISTRY: dict[str, Type[BaseAgent]] = {
     "BasicAgent": BasicAgent,
     "NewAgent": NewAgent,
+    "PPOAgent": PPOAgent,
     # 示例：添加自定义 Agent
     # "MyPPOAgent": MyPPOAgent,
     # "MySACAgent": MySACAgent,
