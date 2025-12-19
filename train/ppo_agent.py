@@ -9,13 +9,12 @@ ppo_agent.py - 基于 Stable-Baselines3 的 PPO Agent
 
 import copy
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
-import numpy as np
+from gym_wrapper import PoolGymEnv
 from stable_baselines3 import PPO
 
-from agent import ActionDict, BaseAgent, BallsDict
-from gym_wrapper import PoolGymEnv
+from agent import ActionDict, BallsDict, BaseAgent
 
 # ============ Logger 导入（带降级） ============
 try:
@@ -47,16 +46,22 @@ class PPOAgent(BaseAgent):
     基于 PPO 的强化学习 Agent
 
     用法：
-        # 训练后使用
-        agent = PPOAgent(model_path="models/ppo_best.zip")
-
-        # 或者训练模式
+        # 使用默认最佳模型
         agent = PPOAgent()
-        agent.train(total_timesteps=100000)
+
+        # 使用指定模型
+        agent = PPOAgent(model_path="models/ppo_final.zip")
+
+        # 使用检查点模型
+        agent = PPOAgent(model_path="models/ppo_checkpoint_200000_steps.zip")
     """
 
     def __init__(self, model_path: Optional[str] = None):
         super().__init__()
+
+        # 默认使用最佳模型
+        if model_path is None:
+            model_path = "models/best_model.zip"
 
         self.model_path = model_path
         self.model = None
