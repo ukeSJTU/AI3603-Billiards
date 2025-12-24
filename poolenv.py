@@ -18,7 +18,7 @@ import copy
 import numpy as np
 import pooltool as pt
 
-from agent import BasicAgent, NewAgent
+from agents import Agent, BasicAgent, BasicAgentPro, NewAgent
 
 
 def collect_ball_states(shot):
