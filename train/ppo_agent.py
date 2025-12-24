@@ -105,9 +105,16 @@ class PPOAgent(BaseAgent):
             # 注意：这里是 hack，更优雅的方式是缓存环境
             if self.env is None:
                 self.env = PoolGymEnv()
+                # 初始化环境（确保 player_targets 等变量被创建）
+                self.env.reset()
 
             # 手动设置环境状态（模拟 reset 后的状态）
             self.env.env.balls = copy.deepcopy(balls)
+
+            # 确保 player_targets 已初始化
+            if self.env.env.player_targets is None:
+                self.env.env.player_targets = {"A": [], "B": []}
+
             self.env.env.player_targets["A"] = my_targets
             self.env.env.table = copy.deepcopy(table)
 
