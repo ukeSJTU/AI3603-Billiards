@@ -1,0 +1,340 @@
+import random
+import signal
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import pooltool as pt
+
+# ============ 类型别名 ============
+ActionDict = Dict[str, float]  # {'V0', 'phi', 'theta', 'a', 'b'}
+BallsDict = Dict[str, Any]  # {ball_id: Ball}
+
+
+# ============ 超时安全模拟机制 ============
+class SimulationTimeoutError(Exception):
+    """物理模拟超时异常"""
+
+    pass
+
+
+def _timeout_handler(signum, frame):
+    """超时信号处理器"""
+    raise SimulationTimeoutError("物理模拟超时")
+
+
+def simulate_with_timeout(shot, timeout: int = 3) -> bool:
+    """带超时保护的物理模拟
+
+    Args:
+        shot: pt.System 对象
+        timeout: 超时时间（秒），默认3秒
+
+    Returns:
+        bool: True 表示模拟成功，False 表示超时或失败
+
+    Note:
+        使用 signal.SIGALRM 实现超时机制（仅支持 Unix/Linux）
+        Windows 系统或非主线程调用可能无法正常工作
+    """
+    old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+    signal.alarm(timeout)
+
+    try:
+        pt.simulate(shot, inplace=True)
+        signal.alarm(0)
+        return True
+    except SimulationTimeoutError:
+        log.warning(f"物理模拟超时（>{timeout}秒），跳过此次模拟")
+        return False
+    except Exception as e:
+        signal.alarm(0)
+        raise e
+    finally:
+        signal.signal(signal.SIGALRM, old_handler)
+
+
+# ============ 击球评分函数 ============
+def analyze_shot_for_reward(
+    shot: pt.System, last_state: dict, player_targets: list
+) -> float:
+    """
+    分析击球结果并计算奖励分数（完全对齐台球规则）
+
+    Args:
+        shot: 已完成物理模拟的 System 对象
+        last_state: 击球前的球状态，{ball_id: Ball}
+        player_targets: 当前玩家目标球ID，['1', '2', ...] 或 ['8']
+
+    Returns:
+        float: 奖励分数
+            +50/球（己方进球）, +100（合法黑8）, +10（合法无进球）
+            -100（白球进袋）, -150（非法黑8/白球+黑8）, -30（首球/碰库犯规）
+
+    规则核心：
+        - 清台前：player_targets = ['1'-'7'] 或 ['9'-'15']，黑8不属于任何人
+        - 清台后：player_targets = ['8']，黑8成为唯一目标球
+    """
+    # 获取奖励配置
+    if _HAS_CONFIG:
+        rewards = REWARD_CONFIG
+    else:
+        # 内联默认值
+        class rewards:  # type: ignore
+            own_ball_pocketed = 50
+            legal_eight_ball = 100
+            legal_no_pocket = 10
+            cue_pocketed = -100
+            illegal_eight = -150
+            cue_and_eight = -150
+            foul_first_hit = -30
+            foul_no_rail = -30
+            enemy_pocketed = -20
+
+    # 1. 基本分析 - 找出新进袋的球
+    new_pocketed = [
+        bid
+        for bid, b in shot.balls.items()
+        if b.state.s == 4 and last_state[bid].state.s != 4
+    ]
+
+    # 根据 player_targets 判断进球归属
+    own_pocketed = [bid for bid in new_pocketed if bid in player_targets]
+    enemy_pocketed = [
+        bid
+        for bid in new_pocketed
+        if bid not in player_targets and bid not in ["cue", "8"]
+    ]
+    cue_pocketed = "cue" in new_pocketed
+    eight_pocketed = "8" in new_pocketed
+
+    # 2. 分析首球碰撞
+    first_contact_ball_id = None
+    foul_first_hit = False
+    valid_ball_ids = {
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+    }
+
+    for e in shot.events:
+        et = str(e.event_type).lower()
+        ids = list(e.ids) if hasattr(e, "ids") else []
+        if ("cushion" not in et) and ("pocket" not in et) and ("cue" in ids):
+            other_ids = [i for i in ids if i != "cue" and i in valid_ball_ids]
+            if other_ids:
+                first_contact_ball_id = other_ids[0]
+                break
+
+    # 首球犯规判定
+    if first_contact_ball_id is None:
+        if len(last_state) > 2 or player_targets != ["8"]:
+            foul_first_hit = True
+    else:
+        if first_contact_ball_id not in player_targets:
+            foul_first_hit = True
+
+    # 3. 分析碰库
+    cue_hit_cushion = False
+    target_hit_cushion = False
+    foul_no_rail = False
+
+    for e in shot.events:
+        et = str(e.event_type).lower()
+        ids = list(e.ids) if hasattr(e, "ids") else []
+        if "cushion" in et:
+            if "cue" in ids:
+                cue_hit_cushion = True
+            if first_contact_ball_id is not None and first_contact_ball_id in ids:
+                target_hit_cushion = True
+
+    if (
+        len(new_pocketed) == 0
+        and first_contact_ball_id is not None
+        and (not cue_hit_cushion)
+        and (not target_hit_cushion)
+    ):
+        foul_no_rail = True
+
+    # 4. 计算奖励分数
+    score = 0
+
+    # 白球进袋处理
+    if cue_pocketed and eight_pocketed:
+        score += rewards.cue_and_eight
+    elif cue_pocketed:
+        score += rewards.cue_pocketed
+    elif eight_pocketed:
+        if player_targets == ["8"]:
+            score += rewards.legal_eight_ball
+        else:
+            score += rewards.illegal_eight
+
+    # 首球犯规和碰库犯规
+    if foul_first_hit:
+        score += rewards.foul_first_hit
+    if foul_no_rail:
+        score += rewards.foul_no_rail
+
+    # 进球得分
+    score += len(own_pocketed) * rewards.own_ball_pocketed
+    score += len(enemy_pocketed) * rewards.enemy_pocketed
+
+    # 合法无进球小奖励
+    if (
+        score == 0
+        and not cue_pocketed
+        and not eight_pocketed
+        and not foul_first_hit
+        and not foul_no_rail
+    ):
+        score = rewards.legal_no_pocket
+
+    return score
+
+
+# ============ Agent 抽象基类 ============
+class Agent(ABC):
+    """
+    Agent 抽象基类
+
+    设计原则：
+    1. 定义统一的决策接口
+    2. 提供通用工具方法（噪声、随机动作等）
+    3. 子类只需实现 decision 方法
+    """
+
+    def __init__(self):
+        """初始化基类"""
+        if _HAS_CONFIG:
+            self._action_bounds = ACTION_BOUNDS
+        else:
+            self._action_bounds = self._default_bounds()
+
+    @staticmethod
+    def _default_bounds():
+        """内联默认边界（用于 eval 降级）"""
+
+        class _Bounds:
+            V0 = (0.5, 8.0)
+            phi = (0.0, 360.0)
+            theta = (0.0, 90.0)
+            a = (-0.5, 0.5)
+            b = (-0.5, 0.5)
+
+            def as_dict(self):
+                return {
+                    "V0": self.V0,
+                    "phi": self.phi,
+                    "theta": self.theta,
+                    "a": self.a,
+                    "b": self.b,
+                }
+
+        return _Bounds()
+
+    @abstractmethod
+    def decision(
+        self,
+        balls: Optional[BallsDict] = None,
+        my_targets: Optional[List[str]] = None,
+        table: Optional[Any] = None,
+    ) -> ActionDict:
+        """
+        决策方法（子类必须实现）
+
+        Args:
+            balls: 球状态字典，{ball_id: Ball}
+            my_targets: 目标球ID列表，['1', '2', ...]
+            table: 球桌对象
+
+        Returns:
+            ActionDict: {'V0', 'phi', 'theta', 'a', 'b'}
+        """
+        raise NotImplementedError
+
+    def random_action(self) -> ActionDict:
+        """
+        生成随机击球动作
+
+        Returns:
+            ActionDict: 在动作空间边界内的随机动作
+        """
+        bounds = self._action_bounds
+        return {
+            "V0": round(random.uniform(*bounds.V0), 2),
+            "phi": round(random.uniform(*bounds.phi), 2),
+            "theta": round(random.uniform(*bounds.theta), 2),
+            "a": round(random.uniform(*bounds.a), 3),
+            "b": round(random.uniform(*bounds.b), 3),
+        }
+
+    def _random_action(self) -> ActionDict:
+        """兼容旧代码（已废弃，请使用 random_action）"""
+        return self.random_action()
+
+    @staticmethod
+    def apply_noise(
+        action: ActionDict,
+        noise_std: Dict[str, float],
+        bounds: Optional[Any] = None,
+    ) -> ActionDict:
+        """
+        对动作添加高斯噪声
+
+        Args:
+            action: 原始动作
+            noise_std: 各参数的噪声标准差
+            bounds: 动作边界（用于裁剪）
+
+        Returns:
+            ActionDict: 添加噪声后的动作
+        """
+        if bounds is None:
+            if _HAS_CONFIG:
+                bounds = ACTION_BOUNDS
+            else:
+                bounds = BaseAgent._default_bounds()
+
+        noisy = {}
+        for key, val in action.items():
+            noisy_val = val + np.random.normal(0, noise_std.get(key, 0))
+            bound = getattr(bounds, key, (-np.inf, np.inf))
+            if key == "phi":
+                noisy_val = noisy_val % 360
+            else:
+                noisy_val = np.clip(noisy_val, *bound)
+            noisy[key] = float(noisy_val)
+        return noisy
+
+    @staticmethod
+    def get_remaining_targets(
+        balls: BallsDict,
+        my_targets: List[str],
+    ) -> Tuple[List[str], bool]:
+        """
+        检查剩余目标球并判断是否需要切换到黑8
+
+        Args:
+            balls: 球状态字典
+            my_targets: 当前目标球列表
+
+        Returns:
+            Tuple[List[str], bool]: (更新后的目标球列表, 是否切换到黑8)
+        """
+        remaining = [bid for bid in my_targets if balls[bid].state.s != 4]
+        if len(remaining) == 0:
+            return ["8"], True
+        return my_targets, False

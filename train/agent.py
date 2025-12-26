@@ -15,30 +15,26 @@ agent.py - Agent 决策模块
 import copy
 import random
 import signal
-from typing import Any, Dict, List, Optional, Tuple
-
-import numpy as np
-import pooltool as pt
 
 # ============ ABC 兼容层 ============
 # 设计目的: 在 train 中使用 ABC 强制接口约束，
 # 但代码粘贴到 eval 时可以无缝降级为普通类
-try:
-    from abc import ABC, abstractmethod
+# try:
+#     from abc import ABC, abstractmethod
+#     _HAS_ABC = True
+# except ImportError:
+#     _HAS_ABC = False
+#     class ABC:  # type: ignore
+#         """ABC 占位符（降级模式）"""
+#         pass
+#     def abstractmethod(func):  # type: ignore
+#         """abstractmethod 占位符（降级模式）"""
+#         return func
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional, Tuple
 
-    _HAS_ABC = True
-except ImportError:
-    _HAS_ABC = False
-
-    class ABC:  # type: ignore
-        """ABC 占位符（降级模式）"""
-
-        pass
-
-    def abstractmethod(func):  # type: ignore
-        """abstractmethod 占位符（降级模式）"""
-        return func
-
+import numpy as np
+import pooltool as pt
 
 # ============ 第三方库导入 ============
 from bayes_opt import BayesianOptimization, SequentialDomainReductionTransformer
