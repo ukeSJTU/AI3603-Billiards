@@ -4,4 +4,9 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pooltool-billiards>=0.5.0",
+]
+
+[[tool.uv.index]]
+url = "https://archive.panda3d.org/"
