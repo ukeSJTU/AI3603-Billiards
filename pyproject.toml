@@ -28,3 +28,9 @@ explicit = true
 panda3d = [
     { index = "panda3d-archive", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+    "ruff>=0.14.10",
+]
