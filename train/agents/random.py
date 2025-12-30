@@ -4,9 +4,7 @@
 
 from typing import Any, List, Optional, override
 
-from train.agents.base import ActionDict, BallsDict
-
-from .base import Agent
+from .base import ActionDict, Agent, BallsDict
 
 
 class RandomAgent(Agent):
