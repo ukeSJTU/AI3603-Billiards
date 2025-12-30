@@ -13,6 +13,7 @@ dependencies = [
     "panda3d>=1.10.13,<1.11; sys_platform == 'darwin'",
     "panda3d==1.11.0.dev3702; sys_platform == 'linux'",
     "panda3d==1.11.0.dev3702; sys_platform == 'win32'",
+    "loguru>=0.7.3",
 ]
 
 [tool.uv]
