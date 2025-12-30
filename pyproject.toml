@@ -1,9 +1,14 @@
 [project]
 name = "ai3603-billiards"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI3603 课程期末大作业 - 台球游戏 AI 项目"
 readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.12"
+authors = [
+    {name = "uke", email = "uke_sjtu@sjtu.edu.cn"}
+]
+
 dependencies = [
     "pooltool-billiards>=0.5.0",
 ]
