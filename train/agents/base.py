@@ -5,6 +5,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pooltool as pt
+from config import ACTION_BOUNDS, REWARD_CONFIG
+from logger import get_logger
+
+# Initialize logger
+log = get_logger(__name__)
 
 # ============ 类型别名 ============
 ActionDict = Dict[str, float]  # {'V0', 'phi', 'theta', 'a', 'b'}
@@ -75,21 +80,8 @@ def analyze_shot_for_reward(
         - 清台前：player_targets = ['1'-'7'] 或 ['9'-'15']，黑8不属于任何人
         - 清台后：player_targets = ['8']，黑8成为唯一目标球
     """
-    # 获取奖励配置
-    if _HAS_CONFIG:
-        rewards = REWARD_CONFIG
-    else:
-        # 内联默认值
-        class rewards:  # type: ignore
-            own_ball_pocketed = 50
-            legal_eight_ball = 100
-            legal_no_pocket = 10
-            cue_pocketed = -100
-            illegal_eight = -150
-            cue_and_eight = -150
-            foul_first_hit = -30
-            foul_no_rail = -30
-            enemy_pocketed = -20
+    # Get reward configuration
+    rewards = REWARD_CONFIG
 
     # 1. 基本分析 - 找出新进袋的球
     new_pocketed = [
@@ -218,32 +210,7 @@ class Agent(ABC):
 
     def __init__(self):
         """初始化基类"""
-        if _HAS_CONFIG:
-            self._action_bounds = ACTION_BOUNDS
-        else:
-            self._action_bounds = self._default_bounds()
-
-    @staticmethod
-    def _default_bounds():
-        """内联默认边界（用于 eval 降级）"""
-
-        class _Bounds:
-            V0 = (0.5, 8.0)
-            phi = (0.0, 360.0)
-            theta = (0.0, 90.0)
-            a = (-0.5, 0.5)
-            b = (-0.5, 0.5)
-
-            def as_dict(self):
-                return {
-                    "V0": self.V0,
-                    "phi": self.phi,
-                    "theta": self.theta,
-                    "a": self.a,
-                    "b": self.b,
-                }
-
-        return _Bounds()
+        self._action_bounds = ACTION_BOUNDS
 
     @abstractmethod
     def decision(
@@ -303,10 +270,7 @@ class Agent(ABC):
             ActionDict: 添加噪声后的动作
         """
         if bounds is None:
-            if _HAS_CONFIG:
-                bounds = ACTION_BOUNDS
-            else:
-                bounds = BaseAgent._default_bounds()
+            bounds = ACTION_BOUNDS
 
         noisy = {}
         for key, val in action.items():
@@ -338,3 +302,6 @@ class Agent(ABC):
         if len(remaining) == 0:
             return ["8"], True
         return my_targets, False
+
+    # Alias for backward compatibility
+    check_remaining_targets = get_remaining_targets
