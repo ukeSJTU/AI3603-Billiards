@@ -12,32 +12,16 @@ import argparse
 from pathlib import Path
 
 import torch
+from gym_wrapper import PoolGymEnv
+from logger import get_logger, setup_logger
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 
-from agent import BasicAgent
-from gym_wrapper import PoolGymEnv
+from .agents import BasicAgent
 
-# ============ Logger 导入（带降级） ============
-try:
-    from logger import get_logger, setup_logger
-
-    setup_logger()
-    log = get_logger(__name__)
-except ImportError:
-
-    class _FakeLogger:
-        def info(self, msg):
-            print(f"[INFO] {msg}")
-
-        def warning(self, msg):
-            print(f"[WARNING] {msg}")
-
-        def error(self, msg):
-            print(f"[ERROR] {msg}")
-
-    log = _FakeLogger()
+setup_logger()
+log = get_logger(__name__)
 
 
 def make_env():
@@ -68,7 +52,7 @@ def train(
         n_eval_episodes: 每次评估的对局数
         n_envs: 并行环境数量（推荐 4-8，设为 1 则使用单进程）
     """
-    log.info(f"开始训练 PPO Agent")
+    log.info("开始训练 PPO Agent")
     log.info(f"总训练步数: {total_timesteps}")
     log.info(f"保存目录: {save_dir}")
     log.info(f"并行环境数: {n_envs}")
@@ -165,7 +149,7 @@ def train(
     env.save(f"{save_dir}/vec_normalize_final.pkl")
 
     log.info("=" * 60)
-    log.info(f"训练完成！")
+    log.info("训练完成！")
     log.info(f"最终模型: {save_dir}/ppo_final.zip")
     log.info(f"最佳模型: {save_dir}/best_model.zip")
     log.info(f"归一化参数: {save_dir}/vec_normalize_final.pkl")
@@ -186,15 +170,11 @@ def main():
         default=200000,
         help="总训练步数（推荐: 100k-500k）",
     )
-    parser.add_argument(
-        "--save-dir", type=str, default="models", help="模型保存目录"
-    )
+    parser.add_argument("--save-dir", type=str, default="models", help="模型保存目录")
     parser.add_argument(
         "--save-freq", type=int, default=10000, help="检查点保存频率（步数）"
     )
-    parser.add_argument(
-        "--eval-freq", type=int, default=5000, help="评估频率（步数）"
-    )
+    parser.add_argument("--eval-freq", type=int, default=5000, help="评估频率（步数）")
     parser.add_argument(
         "--n-eval-episodes", type=int, default=5, help="每次评估的对局数"
     )

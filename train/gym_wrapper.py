@@ -9,38 +9,18 @@ gym_wrapper.py - 将 PoolEnv 包装为 Gymnasium 兼容环境
 """
 
 import copy
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
+from logger import get_logger
 
-from agent import BasicAgent, analyze_shot_for_reward
+from agents import BasicAgent, analyze_shot_for_reward
 from poolenv import PoolEnv
 
-# ============ Logger 导入（带降级） ============
-try:
-    from logger import get_logger
-
-    log = get_logger(__name__)
-except ImportError:
-
-    class _FakeLogger:
-        """简单的 print-based logger（降级模式）"""
-
-        def info(self, msg):
-            print(f"[INFO] {msg}")
-
-        def debug(self, msg):
-            pass
-
-        def warning(self, msg):
-            print(f"[WARNING] {msg}")
-
-        def error(self, msg):
-            print(f"[ERROR] {msg}")
-
-    log = _FakeLogger()
+# Initialize logger
+log = get_logger(__name__)
 
 
 class PoolGymEnv(gym.Env):
@@ -111,9 +91,7 @@ class PoolGymEnv(gym.Env):
 
         return obs, info
 
-    def step(
-        self, action: np.ndarray
-    ) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict]:
         """执行一步"""
         self.step_count += 1
 
