@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+
 import math
 import pooltool as pt
 import numpy as np

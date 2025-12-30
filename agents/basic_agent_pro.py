@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+
 import math
 import pooltool as pt
 import numpy as np
@@ -356,4 +359,3 @@ class BasicAgentPro(Agent):
         print(f"[BasicAgent_pro] Best Avg Score: {avg_rewards[best_idx]:.3f} (Sims: {self.n_simulations})")
         
         return best_action
-
