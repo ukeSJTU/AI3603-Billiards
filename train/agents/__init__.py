@@ -8,7 +8,7 @@ Agents:
 - BasicAgent: Bayesian optimization-based agent, provided by TA
 - BasicAgentPro: MCTS-based advanced agent, provided by TA
 - RandomAgent: Random action agent
-- NewAgent: Geometry-guided agent
+- GeometryAgent: Geometry-guided agent
 - PPOAgent: PPO reinforcement learning agent
 
 Types:
@@ -27,7 +27,7 @@ from .base import (
     simulate_with_timeout,
 )
 from .basic import BasicAgent
-from .new import NewAgent
+from .geometry import GeometryAgent
 from .ppo import PPOAgent
 from .pro import BasicAgentPro
 from .random import RandomAgent
@@ -41,6 +41,6 @@ __all__ = [
     "BasicAgent",
     "BasicAgentPro",
     "RandomAgent",
-    "NewAgent",
+    "GeometryAgent",
     "PPOAgent",
 ]

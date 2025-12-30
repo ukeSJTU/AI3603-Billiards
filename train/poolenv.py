@@ -18,7 +18,7 @@ import copy
 import numpy as np
 import pooltool as pt
 
-from .agents import BasicAgent, NewAgent
+from .agents import BasicAgent, GeometryAgent
 
 
 def collect_ball_states(shot):
@@ -746,7 +746,7 @@ if __name__ == "__main__":
     # 初始化任务环境
     env = PoolEnv()
 
-    agent_a, agent_b = BasicAgent(), NewAgent()
+    agent_a, agent_b = BasicAgent(), GeometryAgent()
 
     env.reset(target_ball="solid")  # 指定player_a打什么球
     while True:

@@ -13,7 +13,7 @@ evaluate.py - Agent 评估脚本
   python evaluate.py                          # 默认配置
   python evaluate.py -n 10                    # 快速测试（10局）
   python evaluate.py --seed 42 --seed-enabled # 固定种子
-  python evaluate.py --agent-b NewAgent -n 60 # 测试自定义 Agent
+  python evaluate.py --agent-b GeometryAgent -n 60 # 测试自定义 Agent
   python evaluate.py -q                       # 安静模式
   python evaluate.py --agent-a-config configs/basic_agent.yaml  # 使用 YAML 配置
 """
@@ -35,7 +35,14 @@ except ImportError:
 from poolenv import PoolEnv
 from utils import set_random_seed
 
-from .agents import Agent, BasicAgent, BasicAgentPro, NewAgent, PPOAgent, RandomAgent
+from .agents import (
+    Agent,
+    BasicAgent,
+    BasicAgentPro,
+    GeometryAgent,
+    PPOAgent,
+    RandomAgent,
+)
 
 # 配置导入
 try:
@@ -53,7 +60,7 @@ except ImportError:
 AGENT_REGISTRY: dict[str, Type[Agent]] = {
     "BasicAgent": BasicAgent,
     "BasicAgentPro": BasicAgentPro,
-    "NewAgent": NewAgent,
+    "GeometryAgent": GeometryAgent,
     "PPOAgent": PPOAgent,
     "RandomAgent": RandomAgent,
     # 示例：添加自定义 Agent
@@ -135,7 +142,7 @@ def parse_args():
     parser.add_argument(
         "--agent-b",
         type=str,
-        default="NewAgent",
+        default="GeometryAgent",
         choices=list(AGENT_REGISTRY.keys()),
         help="Agent B 类型",
     )

@@ -1,5 +1,5 @@
 """
-NewAgent - Geometry-Guided Agent
+GeometryAgent - Geometry-Guided Agent
 
 An intelligent agent using geometry-based heuristics for shot selection:
 1. Evaluates all target ball + pocket combinations
@@ -27,7 +27,7 @@ from .base import (
 log = get_logger(__name__)
 
 
-class NewAgent(Agent):
+class GeometryAgent(Agent):
     """
     基于几何启发 + 多袋口评估 + 精细搜索的智能 Agent
 
@@ -49,7 +49,7 @@ class NewAgent(Agent):
         angle_spread: float = 5.0,
         v0_spread: float = 1.0,
     ):
-        """初始化 NewAgent
+        """初始化 GeometryAgent
 
         参数：
             n_candidates: 候选动作数量
@@ -61,7 +61,7 @@ class NewAgent(Agent):
         self.n_candidates = n_candidates
         self.angle_spread = angle_spread
         self.v0_spread = v0_spread
-        log.info("NewAgent (Geometry-Guided) 已初始化。")
+        log.info("GeometryAgent (Geometry-Guided) 已初始化。")
 
     # ============ 几何工具函数 ============
     @staticmethod
@@ -353,7 +353,7 @@ class NewAgent(Agent):
         """
         # Step 0: 输入验证
         if balls is None or my_targets is None or table is None:
-            log.warning("NewAgent: 输入不完整，使用随机动作")
+            log.warning("GeometryAgent: 输入不完整，使用随机动作")
             return self.random_action()
 
         try:
