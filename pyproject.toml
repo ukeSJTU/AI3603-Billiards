@@ -3,15 +3,28 @@ name = "ai3603-billiards"
 version = "0.1.0"
 description = "AI3603 课程期末大作业 - 台球游戏 AI 项目"
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
 requires-python = ">=3.12"
-authors = [
-    {name = "uke", email = "uke_sjtu@sjtu.edu.cn"}
-]
+authors = [{ name = "uke", email = "uke_sjtu@sjtu.edu.cn" }]
 
 dependencies = [
     "pooltool-billiards>=0.5.0",
+    # The following panda3d versions are specified for different platforms, see https://github.com/ekiefl/pooltool/blob/v0.5.0/pyproject.toml
+    "panda3d>=1.10.13,<1.11; sys_platform == 'darwin'",
+    "panda3d==1.11.0.dev3702; sys_platform == 'linux'",
+    "panda3d==1.11.0.dev3702; sys_platform == 'win32'",
 ]
 
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
 [[tool.uv.index]]
+name = "panda3d-archive"
 url = "https://archive.panda3d.org/"
+explicit = true
+
+[tool.uv.sources]
+# Specify panda3d from the custom index for Linux and Windows
+panda3d = [
+    { index = "panda3d-archive", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
