@@ -7,17 +7,22 @@ evaluate.py - Agent 评估脚本
 - 统计胜负和得分
 - 支持切换先后手和球型分配
 - 支持命令行参数配置
+- 支持 YAML 配置文件加载 Agent 参数
 
 使用方式：
   python evaluate.py                          # 默认配置
   python evaluate.py -n 10                    # 快速测试（10局）
   python evaluate.py --seed 42 --seed-enabled # 固定种子
-  python evaluate.py --agent-b MyAgent -n 60  # 测试自定义 Agent
+  python evaluate.py --agent-b NewAgent -n 60 # 测试自定义 Agent
   python evaluate.py -q                       # 安静模式
+  python evaluate.py --agent-a-config configs/basic_agent.yaml  # 使用 YAML 配置
 """
 
 import argparse
-from typing import Type
+from pathlib import Path
+from typing import Any, Dict, Optional, Type
+
+import yaml
 
 # 初始化 logger（在其他导入之前）
 try:
@@ -27,10 +32,10 @@ try:
 except ImportError:
     pass
 
-from agent import BaseAgent, BasicAgent, NewAgent
 from poolenv import PoolEnv
-from ppo_agent import PPOAgent
 from utils import set_random_seed
+
+from .agents import Agent, BasicAgent, BasicAgentPro, NewAgent, PPOAgent, RandomAgent
 
 # 配置导入
 try:
@@ -45,14 +50,62 @@ except ImportError:
 
 # ============ Agent 注册表 ============
 # 学生可以在这里注册自定义 Agent
-AGENT_REGISTRY: dict[str, Type[BaseAgent]] = {
+AGENT_REGISTRY: dict[str, Type[Agent]] = {
     "BasicAgent": BasicAgent,
+    "BasicAgentPro": BasicAgentPro,
     "NewAgent": NewAgent,
     "PPOAgent": PPOAgent,
+    "RandomAgent": RandomAgent,
     # 示例：添加自定义 Agent
     # "MyPPOAgent": MyPPOAgent,
     # "MySACAgent": MySACAgent,
 }
+
+
+def load_agent_config(config_path: str) -> Dict[str, Any]:
+    """从 YAML 文件加载 Agent 配置
+
+    Args:
+        config_path: YAML 配置文件路径
+
+    Returns:
+        配置字典，如果文件不存在或解析失败则返回空字典
+    """
+    path = Path(config_path)
+    if not path.exists():
+        print(f"[警告] 配置文件不存在: {config_path}")
+        return {}
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+            return config if config else {}
+    except Exception as e:
+        print(f"[警告] 解析配置文件失败 {config_path}: {e}")
+        return {}
+
+
+def create_agent_from_config(
+    agent_type: str,
+    config: Optional[Dict[str, Any]] = None,
+) -> Agent:
+    """根据类型和配置创建 Agent 实例
+
+    Args:
+        agent_type: Agent 类型名称
+        config: Agent 配置参数（可选）
+
+    Returns:
+        Agent 实例
+    """
+    if agent_type not in AGENT_REGISTRY:
+        raise ValueError(f"未知的 Agent 类型: {agent_type}")
+
+    agent_class = AGENT_REGISTRY[agent_type]
+
+    if config:
+        return agent_class(**config)
+    return agent_class()
 
 
 def parse_args():
@@ -85,6 +138,20 @@ def parse_args():
         default="NewAgent",
         choices=list(AGENT_REGISTRY.keys()),
         help="Agent B 类型",
+    )
+
+    # Agent 配置文件
+    parser.add_argument(
+        "--agent-a-config",
+        type=str,
+        default=None,
+        help="Agent A 的 YAML 配置文件路径",
+    )
+    parser.add_argument(
+        "--agent-b-config",
+        type=str,
+        default=None,
+        help="Agent B 的 YAML 配置文件路径",
     )
 
     # 随机种子
@@ -125,9 +192,13 @@ def main():
     # 设置随机种子
     set_random_seed(enable=args.seed_enabled, seed=args.seed)
 
+    # 加载配置（如果提供）
+    config_a = load_agent_config(args.agent_a_config) if args.agent_a_config else {}
+    config_b = load_agent_config(args.agent_b_config) if args.agent_b_config else {}
+
     # 创建 Agent
-    agent_a = AGENT_REGISTRY[args.agent_a]()
-    agent_b = AGENT_REGISTRY[args.agent_b]()
+    agent_a = create_agent_from_config(args.agent_a, config_a)
+    agent_b = create_agent_from_config(args.agent_b, config_b)
 
     # 创建环境
     env = PoolEnv()
