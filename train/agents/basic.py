@@ -1,29 +1,48 @@
 # BasicAgent 是助教提供的一个 Agent，原始代码请参考项目根目录 agents/basic_agent.py，下面代码已经经过我的调整，更加符合我们训练框架的使用
 
 import copy
-from typing import Any, Callable, List, Optional, override
+from typing import Any, Callable, Dict, List, Optional, override
 
 import numpy as np
 import pooltool as pt
 from bayes_opt import BayesianOptimization, SequentialDomainReductionTransformer
+from logger import get_logger
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern
 
-from .base import ActionDict, Agent, BallsDict, simulate_with_timeout
+from .base import (
+    ActionDict,
+    Agent,
+    BallsDict,
+    analyze_shot_for_reward,
+    simulate_with_timeout,
+)
+
+# Initialize logger
+log = get_logger(__name__)
 
 
 class BasicAgent(Agent):
     """基于贝叶斯优化的智能 Agent"""
 
-    def __init__(self, target_balls=None):
+    def __init__(
+        self,
+        target_balls=None,
+        initial_search: int = 20,
+        opt_search: int = 10,
+        enable_noise: bool = False,
+        noise_std: Optional[Dict[str, float]] = None,
+    ):
         """初始化 Agent
 
         参数：
             target_balls: 保留参数，暂未使用
+            initial_search: 初始随机采样点数
+            opt_search: 后续优化迭代次数
+            enable_noise: 是否启用噪声
+            noise_std: 各参数的噪声标准差
         """
         super().__init__()
-
-        # TODO: change all the arguments below to params of init method later
 
         # 搜索空间
         self.pbounds = {
@@ -34,9 +53,9 @@ class BasicAgent(Agent):
             "b": (-0.5, 0.5),
         }
 
-        # 优化参数
-        self.INITIAL_SEARCH = 20
-        self.OPT_SEARCH = 10
+        # 优化参数 (now configurable via constructor)
+        self.INITIAL_SEARCH = initial_search
+        self.OPT_SEARCH = opt_search
         self.alpha = 1e-2
 
         # Bayes Optimizer settings
@@ -46,10 +65,16 @@ class BasicAgent(Agent):
         self.gamma_pan = 1.0
 
         # 模拟噪声（可调整以改变训练难度）
-        self.noise_std = {"V0": 0.1, "phi": 0.1, "theta": 0.1, "a": 0.003, "b": 0.003}
-        self.enable_noise = False
+        self.noise_std = noise_std or {
+            "V0": 0.1,
+            "phi": 0.1,
+            "theta": 0.1,
+            "a": 0.003,
+            "b": 0.003,
+        }
+        self.enable_noise = enable_noise
 
-        print("BasicAgent (贝叶斯优化版) 已初始化。")
+        log.info("BasicAgent (贝叶斯优化版) 已初始化。")
 
     def _create_optimizer(self, reward_function: Callable, seed: int):
         """创建贝叶斯优化器
@@ -102,10 +127,12 @@ class BasicAgent(Agent):
         """
         # Step 0: 输入验证
         if balls is None:
-            print("[BasicAgent] Agent decision函数未收到balls关键信息，使用随机动作。")
+            log.warning(
+                "[BasicAgent] Agent decision函数未收到balls关键信息，使用随机动作。"
+            )
             return self.random_action()
         if my_targets is None:
-            print("BasicAgent 未检测到目标击球，使用随机动作")
+            log.warning("BasicAgent 未检测到目标击球，使用随机动作")
             return self.random_action()
 
         try:
@@ -117,7 +144,7 @@ class BasicAgent(Agent):
 
             my_targets, switched = self.get_remaining_targets(balls, my_targets)
             if switched:
-                print("[BasicAgent] 我的目标球已全部清空，自动切换目标为：8号球")
+                log.info("[BasicAgent] 我的目标球已全部清空，自动切换目标为：8号球")
 
             # 1.动态创建"奖励函数" (Wrapper)
             # 贝叶斯优化器会调用此函数，并传入参数
@@ -169,7 +196,9 @@ class BasicAgent(Agent):
 
                 return score
 
-            print(f"[BasicAgent] 正在为 Player (targets: {my_targets}) 搜索最佳击球...")
+            log.info(
+                f"[BasicAgent] 正在为 Player (targets: {my_targets}) 搜索最佳击球..."
+            )
 
             seed = np.random.randint(int(1e6))
             optimizer = self._create_optimizer(reward_fn_wrapper, seed)
@@ -180,7 +209,7 @@ class BasicAgent(Agent):
             best_score = best_result["target"]
 
             if best_score < 10:
-                print(
+                log.info(
                     f"[BasicAgent] 未找到好的方案 (最高分: {best_score:.2f})。使用随机动作。"
                 )
                 return self._random_action()
@@ -192,7 +221,7 @@ class BasicAgent(Agent):
                 "b": float(best_params["b"]),
             }
 
-            print(
+            log.info(
                 f"[BasicAgent] 决策 (得分: {best_score:.2f}): "
                 f"V0={action['V0']:.2f}, phi={action['phi']:.2f}, "
                 f"θ={action['theta']:.2f}, a={action['a']:.3f}, b={action['b']:.3f}"
@@ -200,7 +229,7 @@ class BasicAgent(Agent):
             return action
 
         except Exception as e:
-            print(f"[BasicAgent] 决策时发生严重错误，使用随机动作。原因: {e}")
+            log.error(f"[BasicAgent] 决策时发生严重错误，使用随机动作。原因: {e}")
             import traceback
 
             traceback.print_exc()
