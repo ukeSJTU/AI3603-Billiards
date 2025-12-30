@@ -1,0 +1,5 @@
+# PPOAgent 配置
+# PPO 强化学习 Agent 的参数配置
+
+# 模型路径
+model_path: "models/best_model.zip"

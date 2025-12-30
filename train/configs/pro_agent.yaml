@@ -1,0 +1,6 @@
+# BasicAgentPro (MCTS) 配置
+# 蒙特卡洛树搜索智能 Agent 的参数配置
+
+# MCTS 参数
+n_simulations: 50      # 仿真次数
+c_puct: 1.414          # UCB 探索系数

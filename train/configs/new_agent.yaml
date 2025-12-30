@@ -1,0 +1,7 @@
+# NewAgent (Geometry-Guided) 配置
+# 几何启发式智能 Agent 的参数配置
+
+# 搜索参数
+n_candidates: 30       # 候选动作数量
+angle_spread: 5.0      # 角度搜索范围（度）
+v0_spread: 1.0         # 速度搜索范围
