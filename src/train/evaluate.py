@@ -188,7 +188,7 @@ def main() -> Dict[str, int]:
             else:
                 # TODO: extract more step info if needed
                 if step_info.get("ENEMY_INTO_POCKET"):
-                    logger.info(f"玩家 {player} 打入了对方的球，当前状态: {step_info}")
+                    logger.info(f"对方球入袋：{step_info['ENEMY_INTO_POCKET']}")
 
     results["AGENT_A_SCORE"] = results["AGENT_A_WIN"] * WIN_SCORE + results["SAME"] * DRAW_SCORE
     results["AGENT_B_SCORE"] = results["AGENT_B_WIN"] * WIN_SCORE + results["SAME"] * DRAW_SCORE
