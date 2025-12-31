@@ -56,6 +56,7 @@ select = [
     "F",      # pyflakes
     "I",      # isort (import sorting)
 ]
+ignore = ["E501"] 
 
 [tool.ruff.format]
 quote-style = "double"
