@@ -1,5 +1,7 @@
+import random
 import signal
-from typing import Dict
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 import pooltool as pt
 from pooltool import Ball
@@ -7,6 +9,16 @@ from pooltool import Ball
 from src.utils.logger import get_logger
 
 ActionDict = Dict[str, float]  # {'V0', 'phi', 'theta', 'a', 'b'}
+
+
+class ActionBoundsDict(TypedDict):
+    V0: Tuple[float, float]
+    phi: Tuple[float, float]
+    theta: Tuple[float, float]
+    a: Tuple[float, float]
+    b: Tuple[float, float]
+
+
 BallsDict = Dict[str, Ball]  # {ball_id: Ball}
 
 logger = get_logger()
@@ -188,3 +200,84 @@ def analyze_shot_for_reward(shot: pt.System, last_state: dict, player_targets: l
         score = 10
 
     return score
+
+
+# ============ Agent 抽象基类 ============
+class Agent(ABC):
+    """
+    Agent 抽象基类
+
+    设计原则：
+    1. 定义统一的决策接口
+    2. 提供通用工具方法（噪声、随机动作等）
+    3. 子类只需实现 decision 方法
+    """
+
+    def __init__(self):
+        """初始化基类"""
+        self._action_bounds: ActionBoundsDict = {
+            "V0": (5.0, 30.0),  # 初速度范围（单位：m/s）
+            "phi": (0.0, 360.0),  # 水平角度范围（单位：度）
+            "theta": (0.0, 45.0),  # 垂直角度范围（单位：度）
+            "a": (-1.0, 1.0),  # 横向旋转范围
+            "b": (-1.0, 1.0),  # 纵向旋转范围
+        }
+
+    @abstractmethod
+    def decision(
+        self,
+        balls: Optional[BallsDict] = None,
+        my_targets: Optional[List[str]] = None,
+        table: Optional[Any] = None,
+    ) -> ActionDict:
+        """
+        决策方法（子类必须实现）
+
+        Args:
+            balls: 球状态字典，{ball_id: Ball}
+            my_targets: 目标球ID列表，['1', '2', ...]
+            table: 球桌对象
+
+        Returns:
+            ActionDict: {'V0', 'phi', 'theta', 'a', 'b'}
+        """
+        raise NotImplementedError
+
+    def _random_action(self) -> ActionDict:
+        """
+        生成随机击球动作
+
+        Returns:
+            ActionDict: 在动作空间边界内的随机动作
+        """
+        bounds = self._action_bounds
+        return {
+            "V0": round(random.uniform(*bounds["V0"]), 2),
+            "phi": round(random.uniform(*bounds["phi"]), 2),
+            "theta": round(random.uniform(*bounds["theta"]), 2),
+            "a": round(random.uniform(*bounds["a"]), 3),
+            "b": round(random.uniform(*bounds["b"]), 3),
+        }
+
+    @staticmethod
+    def get_remaining_targets(
+        balls: BallsDict,
+        my_targets: List[str],
+    ) -> Tuple[List[str], bool]:
+        """
+        检查剩余目标球并判断是否需要切换到黑8
+
+        Args:
+            balls: 球状态字典
+            my_targets: 当前目标球列表
+
+        Returns:
+            Tuple[List[str], bool]: (更新后的目标球列表, 是否切换到黑8)
+        """
+        remaining = [bid for bid in my_targets if balls[bid].state.s != 4]
+        if len(remaining) == 0:
+            return ["8"], True
+        return my_targets, False
+
+    # Alias for backward compatibility
+    check_remaining_targets = get_remaining_targets
