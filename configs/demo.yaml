@@ -1,0 +1,22 @@
+# ============ 实验名称 ============
+experiment_name: demo    # 实验名称，用于保存日志和结果
+
+# ============ 对战设置 ============
+n_games: 4                # 对战局数（建议使用 4 的倍数以确保公平轮换）
+
+# ============ 随机种子 ============
+random_seed_enabled: false  # 是否启用固定随机种子
+random_seed: 42             # 随机种子值（当 random_seed_enabled=true 时生效）
+
+# ============ Agent A 配置 ============
+agent_a:
+  type: BasicAgent          # Agent 类型：BasicAgent 或 RandomAgent
+  params:                   # Agent 初始化参数
+    initial_search: 20
+    opt_search: 10
+    enable_noise: false
+
+# ============ Agent B 配置 ============
+agent_b:
+  type: RandomAgent         # Agent 类型：BasicAgent 或 RandomAgent
+  params: {}                # RandomAgent 不需要参数
