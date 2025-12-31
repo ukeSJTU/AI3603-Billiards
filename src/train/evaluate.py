@@ -130,9 +130,9 @@ def main() -> Dict[str, int]:
     )
 
     # We need to save the config used for this experiment
-    config_save_path = Path(f"experiments/{folder_name}/evaluation_config.yaml")
+    config_save_path = Path(f"experiments/{folder_name}/config.yaml")
     with open(config_save_path, "w", encoding="utf-8") as f:
-        yaml.dump(config, f)
+        yaml.safe_dump(config, f)
 
     set_random_seed(
         enable=config.get("random_seed_enabled", False),
