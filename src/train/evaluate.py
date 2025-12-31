@@ -1,6 +1,6 @@
 import argparse
 import json
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Type
 
@@ -115,7 +115,7 @@ def main() -> Dict[str, int]:
 
     config = merge_config(config, args)
 
-    folder_name = config.get("experiment_name", "") + f"{date.today().strftime('_%Y%m%d')}"
+    folder_name = config.get("experiment_name", "") + f"{datetime.now().strftime('_%Y%m%d_%H%M%S')}"
     n_games = config.get("n_games", 120)
 
     agent_a_config = config.get("agent_a", {})
