@@ -1,4 +1,5 @@
 import argparse
+from datetime import date
 from pathlib import Path
 from typing import Dict, Type
 
@@ -34,7 +35,7 @@ def parse_args() -> argparse.Namespace:
         "--config",
         "-c",
         type=str,
-        default="configs/default.yaml",
+        default="configs/demo.yaml",
         help="实验配置 YAML 文件路径",
     )
 
@@ -113,7 +114,7 @@ def main() -> Dict[str, int]:
 
     config = merge_config(config, args)
 
-    folder_name = config.get("experiment_name", "default")
+    folder_name = config.get("experiment_name", "") + f"{date.today().strftime('_%Y%m%d')}"
     n_games = config.get("n_games", 120)
 
     agent_a_config = config.get("agent_a", {})
