@@ -1,0 +1,25 @@
+# ============ 实验名称 ============
+experiment_name: basic_vs_geometry    # 实验名称，用于保存日志和结果
+
+# ============ 对战设置 ============
+n_games: 4                # 对战局数（建议使用 4 的倍数以确保公平轮换）
+
+# ============ 随机种子 ============
+random_seed_enabled: true  # 是否启用固定随机种子
+random_seed: 42             # 随机种子值（当 random_seed_enabled=true 时生效）
+
+# ============ Agent A 配置 ============
+agent_a:
+  type: BasicAgent         
+  params:                   
+    initial_search: 20
+    opt_search: 10
+    enable_noise: false
+
+# ============ Agent B 配置 ============
+agent_b:
+  type: GeometryAgent        
+  params: 
+    n_candidates: 30
+    angle_spread: 5.0
+    v0_spread: 1.0
