@@ -4,6 +4,7 @@ from typing import Dict
 
 import yaml
 
+from src.train.poolenv import PoolEnv
 from src.utils.logger import get_logger, setup_logger
 from src.utils.seed import set_random_seed
 
@@ -92,6 +93,8 @@ def main() -> Dict[str, int]:
         seed=config.get("random_seed", 42),
     )
 
+    env = PoolEnv()
+
     results = {
         "AGENT_A_WIN": 0,
         "AGENT_B_WIN": 0,
@@ -100,10 +103,41 @@ def main() -> Dict[str, int]:
         "AGENT_B_SCORE": 0.0,
     }
 
-    for i in range(n_games):
-        logger.info(f"开始第 {i + 1}/{n_games} 局对战")
+    players = []  # TODO: add agent instances
+    target_ball_choice = ["solid", "solid", "stripe", "stripe"]  # 轮换球型
 
-        # TODO: 实现对战逻辑
+    for i in range(n_games):
+        logger.info(f"{'第 {i} 局比赛开始':=^40}")
+
+        target_ball_type = target_ball_choice[i % len(target_ball_choice)]
+        logger.info(f"本局比赛 player A 的目标球型: {target_ball_type}")
+
+        env.reset(target_ball=target_ball_type)
+
+        while True:
+            player = env.get_curr_player()
+
+            obs = env.get_observation(player)
+            if player == "A":
+                action = players[i % 2].decision(*obs)
+            else:
+                action = players[(i + 1) % 2].decision(*obs)
+            step_info = env.take_shot(action)
+
+            done, info = env.get_done()
+
+            if done:
+                # 统计结果（player A/B 转换为 agent A/B）
+                if info["winner"] == "SAME":
+                    results["SAME"] += 1
+                elif info["winner"] == "A":
+                    results[["AGENT_A_WIN", "AGENT_B_WIN"][i % 2]] += 1
+                else:
+                    results[["AGENT_A_WIN", "AGENT_B_WIN"][(i + 1) % 2]] += 1
+                break
+            else:
+                # TODO: extract more step info if needed
+                logger.info(step_info)
 
     results["AGENT_A_SCORE"] = results["AGENT_A_WIN"] * WIN_SCORE + results["SAME"] * DRAW_SCORE
     results["AGENT_B_SCORE"] = results["AGENT_B_WIN"] * WIN_SCORE + results["SAME"] * DRAW_SCORE
