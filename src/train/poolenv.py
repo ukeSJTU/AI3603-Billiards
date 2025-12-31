@@ -171,6 +171,9 @@ class PoolEnv:
                         pocket_ids = list(table.pockets.keys())
         """
         # 如果没给player信息，则默认给当前击球方的observation
+
+        assert self.player_targets is not None, "环境未初始化，请先调用 reset() 方法！"
+
         if player is None:
             player = self.get_curr_player()
         # 返回当前所有球的信息，以及我方球的ID
@@ -204,7 +207,7 @@ class PoolEnv:
 
     # NOTE: 开局怎么摆球、怎么分配球型
     # ? 我不理解这个方法存在的意义，为什么不直接在 __init__ 里初始化？也许是觉得一次启动评测需要多局比赛？每一次比赛结束后都要 reset 一下？
-    def reset(self, state=None, target_ball: str = None):
+    def reset(self, target_ball: str, state=None):
         """重置环境
 
         参数：
@@ -270,6 +273,13 @@ class PoolEnv:
 
         注：enable_noise=True 时添加高斯噪声
         """
+
+        assert self.player_targets is not None, "环境未初始化，请先调用 reset() 方法！"
+        assert self.table is not None, "环境未初始化，请先调用 reset() 方法！"
+        assert self.last_state is not None, "环境未初始化，请先调用 reset() 方法！"
+        assert self.cue is not None, "环境未初始化，请先调用 reset() 方法！"
+        assert not self.done, "游戏已结束，无法继续击球！"
+
         # 添加高斯噪声模拟真实误差
         if self.enable_noise:
             noisy_action = {
