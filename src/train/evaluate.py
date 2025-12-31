@@ -1,9 +1,10 @@
 import argparse
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Type
 
 import yaml
 
+from src.train.agents import Agent, BasicAgent, RandomAgent
 from src.train.poolenv import PoolEnv
 from src.utils.logger import get_logger, setup_logger
 from src.utils.seed import set_random_seed
@@ -12,6 +13,14 @@ logger = get_logger()
 
 WIN_SCORE = 1.0
 DRAW_SCORE = 0.5
+
+AGENT_REGISTRY: dict[str, Type[Agent]] = {
+    "BasicAgent": BasicAgent,
+    "RandomAgent": RandomAgent,
+    # 示例：添加自定义 Agent
+    # "MyPPOAgent": MyPPOAgent,
+    # "MySACAgent": MySACAgent,
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -78,6 +87,9 @@ def main() -> Dict[str, int]:
     folder_name = config.get("experiment_name", "default")
     n_games = config.get("n_games", 120)
 
+    agent_a_config = config.get("agent_a", {})
+    agent_b_config = config.get("agent_b", {})
+
     # Setup the logger
     setup_logger(
         log_dir=f"experiments/{folder_name}",
@@ -87,6 +99,11 @@ def main() -> Dict[str, int]:
     logger.info(
         f"Config loaded from yaml file {args.config} and command line args {args}: {config}"
     )
+
+    # We need to save the config used for this experiment
+    config_save_path = Path(f"experiments/{folder_name}/evaluation_config.yaml")
+    with open(config_save_path, "w", encoding="utf-8") as f:
+        yaml.dump(config, f)
 
     set_random_seed(
         enable=config.get("random_seed_enabled", False),
@@ -103,7 +120,10 @@ def main() -> Dict[str, int]:
         "AGENT_B_SCORE": 0.0,
     }
 
-    players = []  # TODO: add agent instances
+    agent_a = AGENT_REGISTRY[agent_a_config.get("type")](**agent_a_config.get("params", {}))
+    agent_b = AGENT_REGISTRY[agent_b_config.get("type")](**agent_b_config.get("params", {}))
+
+    players = [agent_a, agent_b]
     target_ball_choice = ["solid", "solid", "stripe", "stripe"]  # 轮换球型
 
     for i in range(n_games):
