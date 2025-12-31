@@ -95,7 +95,7 @@ def main():
     try:
         pt.show(
             multisystem,
-            title=f"回放查看器 - 共 {len(multisystem)} 个击球记录（按 'n'/'p' 切换，ESC 退出）",
+            title=f"Replay Viewer - {len(multisystem)} shots (Press 'n'/'p' to switch, ESC to exit)",
         )
     except KeyboardInterrupt:
         print("\n用户中断，退出回放")
