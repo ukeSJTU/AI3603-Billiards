@@ -16,6 +16,9 @@ logger = get_logger()
 WIN_SCORE = 1.0
 DRAW_SCORE = 0.5
 
+# 最大调试轮次数（用于限制保存回放的场景，避免生成过大的回放文件）
+MAX_DEBUG_ROUNDS = 16
+
 AGENT_REGISTRY: dict[str, Type[Agent]] = {
     "BasicAgent": BasicAgent,
     "RandomAgent": RandomAgent,
@@ -133,6 +136,13 @@ def main() -> Dict[str, int]:
         log_dir=f"experiments/{folder_name}",
         log_filename="evaluation.log",
     )
+
+    # 如果用户启用了回放保存，但评估轮数过多（非调试场景），则自动关闭回放保存并给出中文警告
+    if config.get("save_replay", False) and n_games > MAX_DEBUG_ROUNDS:
+        logger.warning(
+            f"检测到启用回放保存但评估轮次({n_games})超过最大调试轮数({MAX_DEBUG_ROUNDS})，已自动关闭回放保存以避免生成过大的回放文件。"
+        )
+        config["save_replay"] = False
 
     logger.info(
         f"Config loaded from yaml file {args.config} and command line args {args}: {config}"
