@@ -310,6 +310,8 @@ class PoolEnv:
                 f"theta={noisy_action['theta']:.2f}°, a={noisy_action['a']:.3f}, b={noisy_action['b']:.3f}"
             )
 
+            action = noisy_action
+        else:
             # 不启用噪声时，打印原始action
             logger.info(
                 f"Player {self.get_curr_player()} 执行指定动作: V0={action['V0']:.2f}, phi={action['phi']:.2f}, "
