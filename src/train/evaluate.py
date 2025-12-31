@@ -38,6 +38,35 @@ def parse_args() -> argparse.Namespace:
         help="实验配置 YAML 文件路径",
     )
 
+    parser.add_argument(
+        "--n_games",
+        "-n",
+        type=int,
+        default=None,
+        help="评估比赛局数，覆盖配置文件中的 n_games 参数。建议设置为4的倍数以均衡球型分配。",
+    )
+
+    parser.add_argument(
+        "--experiment_name",
+        "-e",
+        type=str,
+        default=None,
+        help="实验名称，覆盖配置文件中的 experiment_name 参数。",
+    )
+
+    parser.add_argument(
+        "--random_seed",
+        type=int,
+        default=None,
+        help="随机种子，覆盖配置文件中的 random_seed 参数。",
+    )
+
+    parser.add_argument(
+        "--random_seed_enabled",
+        action="store_true",
+        help="启用随机种子，覆盖配置文件中的 random_seed_enabled 参数。",
+    )
+
     return parser.parse_args()
 
 
@@ -127,7 +156,7 @@ def main() -> Dict[str, int]:
     target_ball_choice = ["solid", "solid", "stripe", "stripe"]  # 轮换球型
 
     for i in range(n_games):
-        logger.info(f"{'第 {i} 局比赛开始':=^40}")
+        logger.info(f"第 {i} 局比赛开始".center(40, "="))
 
         target_ball_type = target_ball_choice[i % len(target_ball_choice)]
         logger.info(f"本局比赛 player A 的目标球型: {target_ball_type}")
