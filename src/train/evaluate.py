@@ -6,7 +6,7 @@ from typing import Dict, Type
 
 import yaml
 
-from src.train.agents import Agent, BasicAgent, GeometryAgent, RandomAgent
+from src.train.agents import Agent, BasicAgent, BasicAgentPro, GeometryAgent, RandomAgent
 from src.train.poolenv import PoolEnv
 from src.utils.logger import get_logger, setup_logger
 from src.utils.seed import set_random_seed
@@ -20,6 +20,7 @@ AGENT_REGISTRY: dict[str, Type[Agent]] = {
     "BasicAgent": BasicAgent,
     "RandomAgent": RandomAgent,
     "GeometryAgent": GeometryAgent,
+    "BasicAgentPro": BasicAgentPro,
     # 示例：添加自定义 Agent
     # "MyPPOAgent": MyPPOAgent,
 }
