@@ -1,4 +1,5 @@
 import argparse
+import json
 from datetime import date
 from pathlib import Path
 from typing import Dict, Type
@@ -192,6 +193,10 @@ def main() -> Dict[str, int]:
 
     results["AGENT_A_SCORE"] = results["AGENT_A_WIN"] * WIN_SCORE + results["SAME"] * DRAW_SCORE
     results["AGENT_B_SCORE"] = results["AGENT_B_WIN"] * WIN_SCORE + results["SAME"] * DRAW_SCORE
+
+    results_save_path = Path(f"experiments/{folder_name}/results.json")
+    with open(results_save_path, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=4)
 
     return results
 
