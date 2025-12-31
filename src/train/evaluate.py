@@ -70,6 +70,12 @@ def parse_args() -> argparse.Namespace:
         help="启用随机种子，覆盖配置文件中的 random_seed_enabled 参数。",
     )
 
+    parser.add_argument(
+        "--save_replay",
+        action="store_true",
+        help="保存所有对局的回放记录到实验目录，以便后续可视化和分析。",
+    )
+
     return parser.parse_args()
 
 
@@ -144,6 +150,8 @@ def main() -> Dict[str, int]:
 
     env = PoolEnv()
 
+    save_replay = config.get("save_replay", False)
+
     results = {
         "AGENT_A_WIN": 0,
         "AGENT_B_WIN": 0,
@@ -198,6 +206,13 @@ def main() -> Dict[str, int]:
     results_save_path = Path(f"experiments/{folder_name}/results.json")
     with open(results_save_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=4)
+
+    # Save replay if requested
+    if save_replay:
+        replay_save_path = Path(f"experiments/{folder_name}/replay.msgpack")
+        logger.info(f"保存回放记录到: {replay_save_path}")
+        env.shot_record.save(str(replay_save_path))
+        logger.info(f"回放记录已保存，共 {len(env.shot_record)} 个击球记录")
 
     return results
 
