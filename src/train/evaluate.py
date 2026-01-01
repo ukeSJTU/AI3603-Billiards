@@ -69,13 +69,20 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument(
         "--random_seed_enabled",
-        action="store_true",
+        # Use BooleanOptionalAction so the flag can be explicitly set to True/False
+        # and defaults to None when omitted. This allows merge_config to
+        # distinguish between "not provided" (None) and an explicit choice.
+        action=argparse.BooleanOptionalAction,
+        default=None,
         help="启用随机种子，覆盖配置文件中的 random_seed_enabled 参数。",
     )
 
     parser.add_argument(
         "--save_replay",
-        action="store_true",
+        # Use BooleanOptionalAction so users can pass --save_replay or --no-save_replay
+        # and so absence of the flag results in None (no overwrite of YAML).
+        action=argparse.BooleanOptionalAction,
+        default=None,
         help="保存所有对局的回放记录到实验目录，以便后续可视化和分析。",
     )
 
@@ -108,6 +115,10 @@ def load_config(config_path: str) -> Dict:
 def merge_config(config: Dict, args: argparse.Namespace) -> Dict:
     """用命令行参数覆盖配置文件（仅覆盖非 None 值）"""
     args_dict = vars(args)
+
+    # Note: boolean CLI flags use BooleanOptionalAction with default=None so that
+    # omitted flags don't overwrite YAML booleans. We only overwrite config keys
+    # when the CLI-provided value is not None.
 
     for key, value in args_dict.items():
         if key != "config" and value is not None:
