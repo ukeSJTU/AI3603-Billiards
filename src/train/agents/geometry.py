@@ -9,7 +9,7 @@ An intelligent agent using geometry-based heuristics for shot selection:
 """
 
 import copy
-from typing import Any, List, Optional, Tuple, override
+from typing import List, Optional, Tuple, override
 
 import numpy as np
 import pooltool as pt
@@ -66,12 +66,12 @@ class GeometryAgent(Agent):
 
     # ============ 几何工具函数 ============
     @staticmethod
-    def get_ball_pos(ball) -> np.ndarray:
+    def get_ball_pos(ball: pt.Ball) -> np.ndarray:
         """获取球的2D位置 (x, y)"""
         return ball.state.rvw[0][:2]
 
     @staticmethod
-    def get_pocket_pos(table, pocket_id: str) -> np.ndarray:
+    def get_pocket_pos(table: pt.Table, pocket_id: str) -> np.ndarray:
         """获取袋口的2D位置 (x, y)"""
         return table.pockets[pocket_id].center[:2]
 
@@ -208,7 +208,7 @@ class GeometryAgent(Agent):
         self,
         balls: BallsDict,
         my_targets: List[str],
-        table: Any,
+        table: pt.Table,
     ) -> Tuple[Optional[str], Optional[str], float, float]:
         """
         找到最佳的球-袋组合
@@ -305,7 +305,7 @@ class GeometryAgent(Agent):
         self,
         action: ActionDict,
         balls: BallsDict,
-        table: Any,
+        table: pt.Table,
         last_state: BallsDict,
         my_targets: List[str],
     ) -> float:
@@ -336,7 +336,7 @@ class GeometryAgent(Agent):
         self,
         balls: Optional[BallsDict] = None,
         my_targets: Optional[List[str]] = None,
-        table: Optional[Any] = None,
+        table: Optional[pt.Table] = None,
     ) -> ActionDict:
         """
         决策方法：几何启发 + 多袋口评估 + 精细搜索
