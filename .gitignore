@@ -15,3 +15,7 @@ wheels/
 # Experiment files
 experiments/*
 !experiments/.gitkeep
+
+# System files
+.DS_Store
+Thumbs.db
