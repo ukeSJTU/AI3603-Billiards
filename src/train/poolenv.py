@@ -13,8 +13,6 @@ poolenv.py - 台球环境模块
 - get_done(): 检查游戏结束
 """
 
-import copy
-
 import numpy as np
 import pooltool as pt
 
@@ -56,7 +54,7 @@ def save_balls_state(balls: BallsDict) -> dict:
     返回：
         dict: 球状态副本
     """
-    return {bid: copy.deepcopy(ball) for bid, ball in balls.items()}
+    return {bid: ball.copy() for bid, ball in balls.items()}
 
 
 def restore_balls_state(saved_state):
@@ -68,7 +66,7 @@ def restore_balls_state(saved_state):
     返回：
         dict: 恢复的球状态副本
     """
-    return {bid: copy.deepcopy(ball) for bid, ball in saved_state.items()}
+    return {bid: ball.copy() for bid, ball in saved_state.items()}
 
 
 class PoolEnv:
@@ -181,9 +179,9 @@ class PoolEnv:
             player = self.get_curr_player()
         # 返回当前所有球的信息，以及我方球的ID
         return (
-            copy.deepcopy(self.balls),
+            {bid: ball.copy() for bid, ball in self.balls.items()},
             self.player_targets[player],
-            copy.deepcopy(self.table),
+            self.table.copy(),
         )
 
     def get_curr_player(
@@ -330,7 +328,7 @@ class PoolEnv:
         pt.simulate(shot, inplace=True)
         # 记录所有shot，用于游戏结束后进行render
         # NOTE: 这里的同样的 System 对象也提供了 copy 方法
-        self.shot_record.append(copy.deepcopy(shot))
+        self.shot_record.append(shot.copy())
 
         # NOTE: 上面的物理模拟结束了，下面开始进行规则判断+状态机更新，我认为有一部分和 agent.py 的 analyze_shot_for_reward 逻辑是重复的
 
@@ -417,7 +415,7 @@ class PoolEnv:
                 "BLACK_BALL_INTO_POCKET": True,
                 "FOUL_FIRST_HIT": False,
                 "NO_POCKET_NO_RAIL": False,
-                "BALLS": copy.deepcopy(self.balls),
+                "BALLS": {bid: ball.copy() for bid, ball in self.balls.items()},
             }
 
         # NOTE: 为什么没有处理“误打黑8”的情况？
@@ -428,7 +426,7 @@ class PoolEnv:
             logger.info("⚪ 白球落袋！犯规，恢复上一杆状态，交换球权。")
             # NOTE: 我觉得这个恢复上一杆状态可以提取成一个方法
             # 保存击打前的balls状态用于返回
-            balls_before_shot = copy.deepcopy(self.last_state)
+            balls_before_shot = {bid: ball.copy() for bid, ball in self.last_state.items()}
             self.balls = restore_balls_state(self.last_state)
             # NOTE: 交换击球方，这个也应该提取成一个方法
             self.curr_player = 1 - self.curr_player
@@ -492,13 +490,13 @@ class PoolEnv:
                 "BLACK_BALL_INTO_POCKET": True,
                 "FOUL_FIRST_HIT": False,
                 "NO_POCKET_NO_RAIL": False,
-                "BALLS": copy.deepcopy(self.balls),
+                "BALLS": {bid: ball.copy() for bid, ball in self.balls.items()},
             }
 
         if first_contact_ball_id is None:
             logger.info("⚠️ 本杆白球未接触任何球，犯规，恢复上一杆状态，交换球权。")
             # 保存击打前的balls状态用于返回
-            balls_before_shot = copy.deepcopy(self.last_state)
+            balls_before_shot = {bid: ball.copy() for bid, ball in self.last_state.items()}
             self.balls = restore_balls_state(self.last_state)
             self.curr_player = 1 - self.curr_player
             self.hit_count += 1
@@ -560,7 +558,7 @@ class PoolEnv:
                         f"⚠️ Player {player} 首次碰撞为对方球或黑八，犯规，恢复上一杆状态，交换球权。"
                     )
                 # 保存击打前的balls状态用于返回
-                balls_before_shot = copy.deepcopy(self.last_state)
+                balls_before_shot = {bid: ball.copy() for bid, ball in self.last_state.items()}
                 self.balls = restore_balls_state(self.last_state)
                 self.curr_player = 1 - self.curr_player
                 self.hit_count += 1
@@ -597,7 +595,7 @@ class PoolEnv:
                     "BLACK_BALL_INTO_POCKET": False,
                     "FOUL_FIRST_HIT": True,
                     "NO_POCKET_NO_RAIL": False,
-                    "BALLS": copy.deepcopy(self.balls),
+                    "BALLS": {bid: ball.copy() for bid, ball in self.balls.items()},
                 }
 
         # 处理无进球的情况
@@ -606,7 +604,7 @@ class PoolEnv:
                 # 无进球且无球碰库，犯规
                 logger.info("⚠️ 本杆无进球且母球和目标球均未碰库，犯规，恢复上一杆状态，交换球权。")
                 # 保存击打前的balls状态用于返回
-                balls_before_shot = copy.deepcopy(self.last_state)
+                balls_before_shot = {bid: ball.copy() for bid, ball in self.last_state.items()}
                 self.balls = restore_balls_state(self.last_state)
                 self.curr_player = 1 - self.curr_player
                 self.hit_count += 1
@@ -685,7 +683,7 @@ class PoolEnv:
                     "BLACK_BALL_INTO_POCKET": False,
                     "FOUL_FIRST_HIT": False,
                     "NO_POCKET_NO_RAIL": False,
-                    "BALLS": copy.deepcopy(self.balls),
+                    "BALLS": {bid: ball.copy() for bid, ball in self.balls.items()},
                 }
 
         # NOTE: 规则 7：有进球时，决定是否继续出杆
@@ -730,7 +728,7 @@ class PoolEnv:
                 "ENEMY_INTO_POCKET": enemy_pocketed,
                 "WHITE_BALL_INTO_POCKET": False,
                 "BLACK_BALL_INTO_POCKET": False,
-                "BALLS": copy.deepcopy(self.balls),
+                "BALLS": {bid: ball.copy() for bid, ball in self.balls.items()},
             }
 
         # NOTE: 没有任何犯规，也没有进球，没有超过最大击球数
@@ -742,5 +740,5 @@ class PoolEnv:
             "BLACK_BALL_INTO_POCKET": False,
             "FOUL_FIRST_HIT": False,
             "NO_POCKET_NO_RAIL": False,
-            "BALLS": copy.deepcopy(self.balls),
+            "BALLS": {bid: ball.copy() for bid, ball in self.balls.items()},
         }

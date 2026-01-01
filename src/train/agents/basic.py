@@ -1,6 +1,5 @@
 # BasicAgent 是助教提供的一个 Agent，原始代码请参考项目根目录 agents/basic_agent.py，下面代码已经经过我的调整，更加符合我们训练框架的使用
 
-import copy
 from typing import Any, Callable, Dict, List, Optional, override
 
 import numpy as np
@@ -137,7 +136,7 @@ class BasicAgent(Agent):
         try:
             # Step 1: 状态快照 + 目标检查
             # 保存一个击球前的状态快照，用于对比
-            last_state_snapshot = {bid: copy.deepcopy(ball) for bid, ball in balls.items()}
+            last_state_snapshot = {bid: ball.copy() for bid, ball in balls.items()}
 
             my_targets, switched = self.get_remaining_targets(balls, my_targets)
             if switched:
@@ -147,8 +146,8 @@ class BasicAgent(Agent):
             # 贝叶斯优化器会调用此函数，并传入参数
             def reward_fn_wrapper(V0, phi, theta, a, b):
                 # 创建一个用于模拟的沙盒系统
-                sim_balls = {bid: copy.deepcopy(ball) for bid, ball in balls.items()}
-                sim_table = copy.deepcopy(table)
+                sim_balls = {bid: ball.copy() for bid, ball in balls.items()}
+                sim_table = table.copy()
                 cue = pt.Cue(cue_ball_id="cue")
 
                 shot = pt.System(table=sim_table, balls=sim_balls, cue=cue)

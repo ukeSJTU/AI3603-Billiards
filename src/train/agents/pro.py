@@ -5,7 +5,6 @@ This is an advanced agent using Monte Carlo Tree Search (MCTS) for decision maki
 It generates heuristic candidate actions and evaluates them through simulation.
 """
 
-import copy
 import math
 import random
 from typing import Any, List, Optional, override
@@ -256,8 +255,8 @@ class BasicAgentPro(Agent):
             模拟后的 System 对象(包含所有球的最终状态),失败返回 None
         """
         # 深拷贝,避免修改原始状态(模拟不应影响实际游戏)
-        sim_balls = {bid: copy.deepcopy(ball) for bid, ball in balls.items()}
-        sim_table = copy.deepcopy(table)
+        sim_balls = {bid: ball.copy() for bid, ball in balls.items()}
+        sim_table = table.copy()
         cue = pt.Cue(cue_ball_id="cue")  # 创建球杆对象
         shot = pt.System(table=sim_table, balls=sim_balls, cue=cue)  # 创建模拟系统
 
@@ -335,7 +334,7 @@ class BasicAgentPro(Agent):
             my_targets = ["8"]  # 如果所有目标球都进了,转为打8号球
 
         # 保存当前状态快照,用于后续评估
-        last_state_snapshot = {bid: copy.deepcopy(ball) for bid, ball in balls.items()}
+        last_state_snapshot = {bid: ball.copy() for bid, ball in balls.items()}
 
         # === MCTS 初始化 ===
         # 生成候选动作池(使用启发式方法)

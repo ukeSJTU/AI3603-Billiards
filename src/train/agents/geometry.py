@@ -8,7 +8,6 @@ An intelligent agent using geometry-based heuristics for shot selection:
 4. Performs fine-grained sampling around the optimal angle
 """
 
-import copy
 from typing import List, Optional, Tuple, override
 
 import numpy as np
@@ -311,8 +310,8 @@ class GeometryAgent(Agent):
     ) -> float:
         """评估单个候选动作的得分"""
         # 创建沙盒环境
-        sim_balls = {bid: copy.deepcopy(ball) for bid, ball in balls.items()}
-        sim_table = copy.deepcopy(table)
+        sim_balls = {bid: ball.copy() for bid, ball in balls.items()}
+        sim_table = table.copy()
         cue = pt.Cue(cue_ball_id="cue")
         shot = pt.System(table=sim_table, balls=sim_balls, cue=cue)
 
@@ -356,7 +355,7 @@ class GeometryAgent(Agent):
 
         try:
             # Step 1: 状态快照 + 目标检查
-            last_state = {bid: copy.deepcopy(ball) for bid, ball in balls.items()}
+            last_state = {bid: ball.copy() for bid, ball in balls.items()}
             my_targets, switched = self.check_remaining_targets(balls, my_targets)
             if switched:
                 log.info("目标球已清空，切换到8号球")
