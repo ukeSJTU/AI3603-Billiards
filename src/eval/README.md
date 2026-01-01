@@ -6,3 +6,9 @@ These code below are directly copied from TA code repo and the only modification
 # ruff: noqa
 # fmt: off
 ```
+
+```bash
+source ./.venv/bin/activate
+cd ./src/eval
+python3 evaluate.py
+```
