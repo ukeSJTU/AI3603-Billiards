@@ -1,6 +1,7 @@
 from .base import ActionDict, Agent, BallsDict
 from .basic import BasicAgent
 from .geometry import GeometryAgent
+from .ppo import PPOAgent
 from .pro import BasicAgentPro
 from .random import RandomAgent
 
@@ -12,4 +13,5 @@ __all__ = [
     "RandomAgent",
     "GeometryAgent",
     "BasicAgentPro",
+    "PPOAgent",
 ]
