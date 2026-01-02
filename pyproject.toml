@@ -32,12 +32,34 @@ explicit = true
 panda3d = [
     { index = "panda3d-archive", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
+torch = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },  # Mac (including M chips)
+    { index = "pytorch-cu121", marker = "sys_platform == 'linux'" }, # Linux with CUDA
+]
+torchvision = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },
+    { index = "pytorch-cu121", marker = "sys_platform == 'linux'" },
+]
 
 [dependency-groups]
 dev = [
     "pre-commit>=4.5.1",
     "ruff>=0.14.10",
 ]
+rl = [
+    "tensorboard>=2.20.0",
+    "torch>=2.0.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
 
 [tool.ruff]
 target-version = "py312"
