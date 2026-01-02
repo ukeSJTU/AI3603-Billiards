@@ -427,9 +427,14 @@ class SelfPlayTrainer:
         # Compute values for GAE
         with torch.no_grad():
             values = self.value_net(states).cpu().numpy()
-            # Bootstrap value (last state)
-            last_value = values[-1] if len(values) > 0 else 0.0
-            values = np.append(values, last_value)
+            # Bootstrap value: 0 if episode ended, otherwise V(last_state)
+            if len(dones) > 0 and dones[-1]:
+                # Episode terminated, bootstrap value is 0
+                bootstrap_value = 0.0
+            else:
+                # Episode not finished, use last state value
+                bootstrap_value = values[-1] if len(values) > 0 else 0.0
+            values = np.append(values, bootstrap_value)
 
         # Compute advantages and returns
         advantages, returns = compute_gae(
@@ -468,6 +473,9 @@ class SelfPlayTrainer:
                 batch_returns = returns[batch_indices]
 
                 # Compute loss
+                value_coef = self.config.get("training", {}).get("value_coef", 0.5)
+                entropy_coef = self.config.get("training", {}).get("entropy_coef", 0.01)
+
                 loss, metrics = ppo_loss(
                     batch_states,
                     batch_actions,
@@ -477,6 +485,8 @@ class SelfPlayTrainer:
                     self.policy_net,
                     self.value_net,
                     self.clip_epsilon,
+                    value_coef,
+                    entropy_coef,
                 )
 
                 # Update policy

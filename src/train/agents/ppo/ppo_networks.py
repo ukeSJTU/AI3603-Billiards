@@ -62,6 +62,11 @@ class PolicyNetwork(nn.Module):
                 nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
                 nn.init.constant_(module.bias, 0.0)
 
+        # Initialize log_std head to produce small initial std (important!)
+        # Start with std ≈ 0.5 (log_std ≈ -0.7)
+        nn.init.constant_(self.log_std_head.weight, 0.0)
+        nn.init.constant_(self.log_std_head.bias, -0.7)
+
     def forward(self, state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass through policy network
@@ -77,8 +82,9 @@ class PolicyNetwork(nn.Module):
         mean = self.mean_head(features)
         log_std = self.log_std_head(features)
 
-        # Clamp for numerical stability
-        log_std = torch.clamp(log_std, min=-20, max=2)
+        # Clamp for numerical stability and reasonable exploration
+        # Range [-2, 1] gives std in [0.135, 2.72]
+        log_std = torch.clamp(log_std, min=-2.0, max=1.0)
         std = torch.exp(log_std)
 
         return mean, std

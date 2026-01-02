@@ -62,7 +62,8 @@ def collect_self_play_episode(
     agent_b_value,
     reward_scheduler,
     iteration: int,
-    device: str,
+    device,  # torch.device or str
+    state_encoder,  # Reusable PPOAgent for state encoding
 ) -> tuple:
     """
     Collect one self-play episode
@@ -96,9 +97,8 @@ def collect_self_play_episode(
             value_net = agent_b_value
             traj = traj_b
 
-        # Encode state
-        ppo_agent = PPOAgent()  # Temporary for encoding
-        state = ppo_agent._encode_state(balls, my_targets, table)
+        # Encode state using shared encoder
+        state = state_encoder._encode_state(balls, my_targets, table)
         state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
 
         # Get action
@@ -106,8 +106,8 @@ def collect_self_play_episode(
             action_raw, log_prob, _ = policy.sample_action(state_tensor)
             value = value_net(state_tensor).item()
 
-        # Map to game action
-        action = ppo_agent._map_action(action_raw.squeeze(0))
+        # Map to game action using shared encoder
+        action = state_encoder._map_action(action_raw.squeeze(0))
 
         # Execute action
         shot_result = env.take_shot(action)
@@ -241,6 +241,9 @@ def main():
 
     env = PoolEnv()
 
+    # Create reusable state encoder (avoids repeated PPOAgent instantiation)
+    state_encoder = PPOAgent()
+
     for iteration in range(start_iteration, n_iterations):
         logger.info(f"=== Iteration {iteration}/{n_iterations} ===")
 
@@ -265,6 +268,7 @@ def main():
                 trainer.reward_scheduler,
                 iteration,
                 device,
+                state_encoder,
             )
 
             # Add trajectories to buffer (only from current policy, not opponent)
