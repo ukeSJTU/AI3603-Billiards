@@ -19,3 +19,31 @@ experiments/*
 # System files
 .DS_Store
 Thumbs.db
+
+checkpoints/*
+runs/*
+
+# LaTeX intermediate files (generated when compiling reports/main.tex)
+# Keep final output (e.g. .pdf) tracked; ignore only build intermediates
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+*.idx
+*.ind
+*.ilg
+*.bbl
+*.blg
+*.nav
+*.snm
+*.synctex.gz
+*.fdb_latexmk
+*.pdfsync
+_minted-*/
