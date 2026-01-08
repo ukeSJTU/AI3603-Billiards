@@ -181,6 +181,8 @@ def main() -> Dict[str, int]:
         "AGENT_A_SCORE": 0.0,  # 最终得分，胜一局得1分，平局得0.5分
         "AGENT_B_SCORE": 0.0,
     }
+    # 记录每局的过程指标，便于后续分析和可视化
+    game_metrics: list[dict] = []
 
     agent_a = AGENT_REGISTRY[agent_a_config.get("type")](**agent_a_config.get("params", {}))
     agent_b = AGENT_REGISTRY[agent_b_config.get("type")](**agent_b_config.get("params", {}))
@@ -196,6 +198,26 @@ def main() -> Dict[str, int]:
 
         env.reset(target_ball=target_ball_type)
 
+        # 每局统计探针（聚合整局信息，便于作图）
+        metrics = {
+            "game_index": i,
+            "target_ball_type": target_ball_type,
+            "player_a_agent": "agent_a" if i % 2 == 0 else "agent_b",
+            "player_b_agent": "agent_b" if i % 2 == 0 else "agent_a",
+            "shots": 0,
+            "own_pocket": 0,
+            "enemy_pocket": 0,
+            "white_in": 0,
+            "black_in": 0,
+            "foul_first_hit": 0,
+            "no_pocket_no_rail": 0,
+            "no_hit": 0,
+            "hit_count": 0,
+            "a_left": None,
+            "b_left": None,
+            "winner_agent": None,
+        }
+
         while True:
             player = env.get_curr_player()
 
@@ -205,6 +227,16 @@ def main() -> Dict[str, int]:
             else:
                 action = players[(i + 1) % 2].decision(*obs)
             step_info = env.take_shot(action)
+
+            # 逐杆累积探针
+            metrics["shots"] += 1
+            metrics["own_pocket"] += len(step_info.get("ME_INTO_POCKET", []))
+            metrics["enemy_pocket"] += len(step_info.get("ENEMY_INTO_POCKET", []))
+            metrics["white_in"] += int(step_info.get("WHITE_BALL_INTO_POCKET", False))
+            metrics["black_in"] += int(step_info.get("BLACK_BALL_INTO_POCKET", False))
+            metrics["foul_first_hit"] += int(step_info.get("FOUL_FIRST_HIT", False))
+            metrics["no_pocket_no_rail"] += int(step_info.get("NO_POCKET_NO_RAIL", False))
+            metrics["no_hit"] += int(step_info.get("NO_HIT", False))
 
             done, info = env.get_done()
 
@@ -216,6 +248,32 @@ def main() -> Dict[str, int]:
                     results[["AGENT_A_WIN", "AGENT_B_WIN"][i % 2]] += 1
                 else:
                     results[["AGENT_A_WIN", "AGENT_B_WIN"][(i + 1) % 2]] += 1
+
+                # 收尾探针：总击球数、剩余目标球、胜者归属
+                metrics["hit_count"] = info.get("hit_count", env.hit_count)
+                a_left = len(
+                    [
+                        bid
+                        for bid in env.player_targets["A"]
+                        if bid != "8" and env.balls[bid].state.s != 4
+                    ]
+                )
+                b_left = len(
+                    [
+                        bid
+                        for bid in env.player_targets["B"]
+                        if bid != "8" and env.balls[bid].state.s != 4
+                    ]
+                )
+                metrics["a_left"] = a_left
+                metrics["b_left"] = b_left
+                if info["winner"] == "A":
+                    metrics["winner_agent"] = "agent_a" if i % 2 == 0 else "agent_b"
+                elif info["winner"] == "B":
+                    metrics["winner_agent"] = "agent_b" if i % 2 == 0 else "agent_a"
+                else:
+                    metrics["winner_agent"] = "same"
+                game_metrics.append(metrics)
                 break
             else:
                 # TODO: extract more step info if needed
@@ -228,6 +286,11 @@ def main() -> Dict[str, int]:
     results_save_path = Path(f"experiments/{folder_name}/results.json")
     with open(results_save_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=4)
+
+    # 保存探针指标，便于画图/统计
+    metrics_save_path = Path(f"experiments/{folder_name}/metrics.json")
+    with open(metrics_save_path, "w", encoding="utf-8") as f:
+        json.dump(game_metrics, f, indent=2)
 
     # Save replay if requested
     if save_replay:
