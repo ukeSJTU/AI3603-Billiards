@@ -11,6 +11,11 @@
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "charliermarsh.ruff"
     },
+    "[latex]": {
+        "editor.formatOnPaste": false,
+        "editor.suggestSelection": "recentlyUsedByPrefix",
+        "editor.wordWrap": "bounded"
+    },
 
     "files.exclude": {
         "**/.git": true,
