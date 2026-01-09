@@ -1,0 +1,31 @@
+# GeometryAgent V3 调优配置（连击停位更高权重 + 更密集采样）
+# 目标：突出连击停位收益，兼顾防守，增加采样密度支撑高质量进攻
+
+experiment_name: "geometry_v3_position_tuned"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  params:
+    # 搜索参数（采样更密集）
+    n_candidates: 36
+    angle_spread: 6.0
+    v0_spread: 1.0
+
+    # V3: 防守 + 连击停位
+    enable_defense: true
+    enable_position: true
+    enable_adaptive: false
+
+    # 权重/阈值（停位权重提高，进攻质量要求上调）
+    defense_weight: 0.30
+    position_weight: 0.28
+    defense_threshold: 0.6
+    attack_threshold: 58.0
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10

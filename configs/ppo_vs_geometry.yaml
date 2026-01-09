@@ -1,0 +1,27 @@
+# PPO vs GeometryAgent Evaluation Configuration
+# Use this with the existing evaluate.py script
+
+experiment_name: ppo_vs_geometry
+n_games: 120                      # Total games (recommend multiples of 4 for fairness)
+random_seed_enabled: true
+random_seed: 42
+
+# Agent A: PPO Agent (trained model)
+agent_a:
+  type: PPOAgent
+  params:
+    model_path: "checkpoints/ppo/best_model.pth"  # Path to trained model
+    deterministic: true                            # Use deterministic actions
+
+# Agent B: GeometryAgent (your heuristic agent)
+agent_b:
+  type: GeometryAgent
+  params:
+    n_candidates: 30
+    angle_spread: 5.0
+    v0_spread: 1.0
+    enable_defense: true          # V2 defense strategy
+    enable_position: true         # V3 position optimization
+    enable_adaptive: true         # Adaptive parameter adjustment
+    defense_weight: 0.3
+    position_weight: 0.2

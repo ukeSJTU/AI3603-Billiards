@@ -1,0 +1,31 @@
+# GeometryAgent V3 调优方案（平衡进攻与停位，降低过度挑选）
+# 调整点：降低进攻阈值/停位权重，稍收紧角度，保持较高采样
+
+experiment_name: "geometry_v3_position_plus"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  params:
+    # 搜索参数
+    n_candidates: 36
+    angle_spread: 5.5
+    v0_spread: 1.0
+
+    # V3：防守 + 连击停位
+    enable_defense: true
+    enable_position: true
+    enable_adaptive: false
+
+    # 权重/阈值（更积极进攻，适度停位）
+    defense_weight: 0.30
+    position_weight: 0.25
+    defense_threshold: 0.6
+    attack_threshold: 55.0
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10

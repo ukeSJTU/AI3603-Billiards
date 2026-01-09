@@ -1,0 +1,17 @@
+# GeometryAgent V1 配置（基础版本，对照组）
+# 用于验证向后兼容性和作为基线对比
+
+experiment_name: "geometry_v1_baseline"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  # V1: 不指定任何参数，使用默认值
+  # 所有 enable_* 默认为 False
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10

@@ -1,0 +1,31 @@
+# GeometryAgent Adaptive 调优方案（温和自适应，降低噪声/犯规倾向）
+# 调整点：进攻阈值回落，力度搜索收紧，防守参数回归稳健
+
+experiment_name: "geometry_adaptive_plus"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  params:
+    # 搜索参数
+    n_candidates: 32
+    angle_spread: 5.0
+    v0_spread: 1.2
+
+    # Adaptive：启用所有策略
+    enable_defense: true
+    enable_position: true
+    enable_adaptive: true
+
+    # 权重/阈值（稳健为主）
+    defense_weight: 0.30
+    position_weight: 0.24
+    defense_threshold: 0.6
+    attack_threshold: 56.0
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10

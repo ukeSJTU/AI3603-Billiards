@@ -1,0 +1,51 @@
+# PPO Training Configuration
+
+experiment_name: ppo_training
+random_seed_enabled: true
+random_seed: 42
+
+# Training parameters
+training:
+  n_iterations: 1000              # Total training iterations
+  games_per_iteration: 10         # Self-play games per iteration
+  gamma: 0.99                     # Discount factor
+  gae_lambda: 0.95                # GAE parameter (bias-variance tradeoff)
+  clip_epsilon: 0.2               # PPO clipping parameter
+  learning_rate_policy: 0.0003    # Policy network learning rate (3e-4)
+  learning_rate_value: 0.001      # Value network learning rate (1e-3)
+  n_epochs: 10                    # PPO update epochs per batch
+  batch_size: 64                  # Mini-batch size for updates
+  buffer_size: 2048               # Experience buffer capacity
+  max_grad_norm: 0.5              # Gradient clipping threshold
+  value_coef: 0.5                 # Value loss coefficient
+  entropy_coef: 0.01              # Entropy bonus coefficient
+
+# Neural network architecture
+network:
+  state_dim: 76                   # State vector dimension
+  action_dim: 5                   # Action vector dimension (V0, phi, theta, a, b)
+  hidden_sizes: [256, 256, 128]   # MLP hidden layer sizes
+
+# Reward shaping
+reward:
+  decay_type: exponential         # Decay schedule: 'exponential', 'linear', or 'step'
+  total_iterations: 1000          # Iterations for full decay (dense → sparse)
+
+# Self-play configuration
+self_play:
+  max_opponent_pool_size: 5       # Maximum number of opponent snapshots
+  snapshot_interval: 50           # Save opponent snapshot every N iterations
+
+# Evaluation configuration
+evaluation:
+  eval_interval: 50               # Evaluate every N iterations
+  eval_games: 20                  # Games per opponent during evaluation
+  opponents:                      # Baseline agents to evaluate against
+    - RandomAgent
+    - BasicAgent
+    - GeometryAgent
+
+# Checkpointing
+checkpointing:
+  checkpoint_interval: 100        # Save checkpoint every N iterations
+  checkpoint_dir: checkpoints/ppo # Directory for checkpoints

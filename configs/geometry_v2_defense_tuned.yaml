@@ -1,0 +1,30 @@
+# GeometryAgent V2 调优配置（防守加强 + 阈值更敏感）
+# 目标：相比基础 V2，适度增加防守候选占比，降低威胁触发阈值，提升防守收益
+
+experiment_name: "geometry_v2_defense_tuned"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  params:
+    # 搜索参数
+    n_candidates: 32
+    angle_spread: 5.0
+    v0_spread: 1.0
+
+    # V2: 启用防守策略
+    enable_defense: true
+    enable_position: false
+    enable_adaptive: false
+
+    # 权重/阈值（更敏感的防守）
+    defense_weight: 0.28        # 略高于基础版，更多候选用于防守
+    defense_threshold: 0.6      # 威胁触发阈值下调，防守更积极
+    attack_threshold: 55.0      # 保持进攻质量要求但略放宽
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10

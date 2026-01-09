@@ -1,0 +1,30 @@
+# GeometryAgent V2 调整版（防守占比下调，期望降低犯规）
+# 调整点：防守权重回落至 0.27，阈值回升 0.62，攻阈保持 55
+
+experiment_name: "geometry_v2_defense_slim"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  params:
+    # 搜索参数
+    n_candidates: 32
+    angle_spread: 5.0
+    v0_spread: 1.0
+
+    # V2：防守增强
+    enable_defense: true
+    enable_position: false
+    enable_adaptive: false
+
+    # 权重/阈值（更克制的防守）
+    defense_weight: 0.27
+    defense_threshold: 0.62
+    attack_threshold: 55.0
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10

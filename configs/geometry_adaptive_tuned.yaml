@@ -1,0 +1,31 @@
+# GeometryAgent Adaptive 调优配置（更积极自适应，扩大搜索+力度变化）
+# 目标：领先/落后时调节更明显，停位/防守平衡偏进攻，力度搜索范围加大
+
+experiment_name: "geometry_adaptive_tuned"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  params:
+    # 搜索参数（力度搜索范围更大，候选略增）
+    n_candidates: 32
+    angle_spread: 5.0
+    v0_spread: 1.5
+
+    # Adaptive: 启用所有策略
+    enable_defense: true
+    enable_position: true
+    enable_adaptive: true
+
+    # 权重/阈值（进攻要求更高，防守触发更灵敏）
+    defense_weight: 0.32
+    position_weight: 0.24
+    defense_threshold: 0.55
+    attack_threshold: 60.0
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10

@@ -1,0 +1,31 @@
+# GeometryAgent V3 配置（连击优化版）
+# 在 V2 基础上增加白球停位预测和评估
+
+experiment_name: "geometry_v3_position"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  params:
+    # 搜索参数
+    n_candidates: 30
+    angle_spread: 5.0
+    v0_spread: 1.0
+
+    # V3: 启用防守 + 连击优化
+    enable_defense: true
+    enable_position: true
+    enable_adaptive: false
+
+    # 权重系数
+    defense_weight: 0.3           # 30% 候选用于防守
+    position_weight: 0.2          # 停位分数权重
+    defense_threshold: 0.6
+    attack_threshold: 50.0
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10

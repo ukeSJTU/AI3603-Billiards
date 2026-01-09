@@ -1,0 +1,57 @@
+# Optimized PPO Training Configuration (Bug-Fixed Version)
+# Key changes from ppo_training.yaml:
+# - Reduced buffer_size to match data collection (avoid stale data)
+# - Lowered learning_rate_value to prevent value network overfitting
+# - Reduced n_epochs to prevent overfitting on small batches
+# - Increased games_per_iteration for better sampling diversity
+# - Slightly increased entropy_coef for better exploration
+
+experiment_name: ppo_training_optimized
+random_seed_enabled: true
+random_seed: 42
+
+# Training parameters
+training:
+  n_iterations: 1000              # Total training iterations
+  games_per_iteration: 20         # Self-play games per iteration (↑ from 10)
+  gamma: 0.99                     # Discount factor
+  gae_lambda: 0.95                # GAE parameter (bias-variance tradeoff)
+  clip_epsilon: 0.2               # PPO clipping parameter
+  learning_rate_policy: 0.0003    # Policy network learning rate (3e-4)
+  learning_rate_value: 0.0003     # Value network learning rate (↓ from 1e-3, matched with policy)
+  n_epochs: 4                     # PPO update epochs per batch (↓ from 10)
+  batch_size: 64                  # Mini-batch size for updates
+  buffer_size: 1024               # Experience buffer capacity (↓ from 2048)
+  max_grad_norm: 0.5              # Gradient clipping threshold
+  value_coef: 0.5                 # Value loss coefficient
+  entropy_coef: 0.02              # Entropy bonus coefficient (↑ from 0.01)
+
+# Neural network architecture
+network:
+  state_dim: 76                   # State vector dimension
+  action_dim: 5                   # Action vector dimension (V0, phi, theta, a, b)
+  hidden_sizes: [256, 256, 128]   # MLP hidden layer sizes
+
+# Reward shaping
+reward:
+  decay_type: exponential         # Decay schedule: 'exponential', 'linear', or 'step'
+  total_iterations: 1000          # Iterations for full decay (dense → sparse)
+
+# Self-play configuration
+self_play:
+  max_opponent_pool_size: 5       # Maximum number of opponent snapshots
+  snapshot_interval: 50           # Save opponent snapshot every N iterations
+
+# Evaluation configuration
+evaluation:
+  eval_interval: 50               # Evaluate every N iterations
+  eval_games: 20                  # Games per opponent during evaluation
+  opponents:                      # Baseline agents to evaluate against
+    - RandomAgent
+    - BasicAgent
+    - GeometryAgent
+
+# Checkpointing
+checkpointing:
+  checkpoint_interval: 100        # Save checkpoint every N iterations
+  checkpoint_dir: checkpoints/ppo_optimized # Directory for checkpoints

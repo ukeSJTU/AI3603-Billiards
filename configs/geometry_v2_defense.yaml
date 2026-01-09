@@ -1,0 +1,30 @@
+# GeometryAgent V2 配置（防守增强版）
+# 启用防守策略，评估对手威胁并生成防守候选
+
+experiment_name: "geometry_v2_defense"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  params:
+    # 搜索参数
+    n_candidates: 30
+    angle_spread: 5.0
+    v0_spread: 1.0
+
+    # V2: 启用防守策略
+    enable_defense: true
+    enable_position: false
+    enable_adaptive: false
+
+    # 权重系数
+    defense_weight: 0.2           # 20% 候选用于防守
+    defense_threshold: 0.7        # 威胁阈值
+    attack_threshold: 60.0
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10

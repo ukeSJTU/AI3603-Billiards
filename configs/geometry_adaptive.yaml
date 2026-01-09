@@ -1,0 +1,31 @@
+# GeometryAgent Adaptive 配置（自适应全功能版）
+# 启用所有策略：防守 + 连击 + 自适应参数调整
+
+experiment_name: "geometry_adaptive"
+n_games: 120
+random_seed: 42
+
+agent_a:
+  type: GeometryAgent
+  params:
+    # 搜索参数（这些会被自适应策略动态调整）
+    n_candidates: 30
+    angle_spread: 5.0
+    v0_spread: 1.0
+
+    # Adaptive: 启用所有策略
+    enable_defense: true
+    enable_position: true
+    enable_adaptive: true
+
+    # 权重系数（这些也会被自适应策略动态调整）
+    defense_weight: 0.3
+    position_weight: 0.2
+    defense_threshold: 0.6
+    attack_threshold: 50.0
+
+agent_b:
+  type: BasicAgent
+  params:
+    initial_search: 20
+    opt_search: 10
